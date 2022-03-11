@@ -43,8 +43,6 @@ class Reports
     @positiveCaseLocations
       success: (positiveCases) ->
         for positiveCase, cluster of positiveCases
-          #if (cluster[100].length + cluster[1000].length) > 4
-          #  console.log (cluster[100].length + cluster[1000].length)
           if (cluster[100].length) > 4
             console.log "#{cluster[100].length} cases within 100 meters of one another"
 
@@ -97,7 +95,6 @@ class Reports
 
       Reports.getCases _.extend options,
         success: (cases) =>
-          console.log cases
           IRSThresholdInMonths = 6
 
           data.followups = {}
@@ -106,6 +103,7 @@ class Reports
           data.gender = {}
           data.netsAndIRS = {}
           data.travel = {}
+          data.individualClassification = {}
           data.totalPositiveCases = {}
 
           # Setup hashes for each table
@@ -123,7 +121,11 @@ class Reports
               missingCaseNotification: []
               noFacilityFollowupWithin24Hours: []
               noHouseholdFollowupWithin48Hours: []
-
+              multipleNotified: []
+              falsePositive: []
+              casesForInvestigation: []
+              casesForFullInvestigation: []
+              lostToFollowUp: []
             data.passiveCases[aggregationName] =
               indexCases: []
               indexCaseHouseholdMembers: []
@@ -154,7 +156,14 @@ class Reports
               "Not Applicable":[]
             data.totalPositiveCases[aggregationName] = []
 
-          console.log cases.length
+            data.individualClassification[aggregationName] =
+              withTravelHistory: [],
+              imported: []
+              indigenous: []
+              introduced: []
+              induced: []
+              relapsing: []
+
           _.each cases, (malariaCase) ->
             caseLocation = malariaCase.locationBy(options.aggregationLevel) || "UNKNOWN"
 
@@ -194,6 +203,39 @@ class Reports
             if malariaCase.notFollowedUpAfter48Hours()
               data.followups[caseLocation].noHouseholdFollowupWithin48Hours.push malariaCase
               data.followups["ALL"].noHouseholdFollowupWithin48Hours.push malariaCase
+            
+
+            if malariaCase["Household"]?.CaseInvestigationStatus is "Lost To Followup"
+              data.followups[caseLocation].lostToFollowUp.push malariaCase
+              data.followups["ALL"].lostToFollowUp.push malariaCase
+
+            if malariaCase["Facility"]?.DmsoVerifiedResults is "Duplicate notification"
+              data.followups[caseLocation].multipleNotified.push malariaCase
+              data.followups["ALL"].multipleNotified.push malariaCase
+
+            if malariaCase["Facility"]?.DmsoVerifiedResults is "False positive"
+              data.followups[caseLocation].falsePositive.push malariaCase
+              data.followups["ALL"].falsePositive.push malariaCase
+
+            if malariaCase["Facility"]?.DmsoVerifiedResults !="False positive" and malariaCase["Facility"]?.DmsoVerifiedResults != "Duplicate notification"
+              data.followups[caseLocation].casesForInvestigation.push malariaCase
+              data.followups["ALL"].casesForInvestigation.push malariaCase
+            
+            if malariaCase["Facility"]?.DmsoVerifiedResults != "False positive" and malariaCase["Facility"]?.DmsoVerifiedResults != "Duplicate notification" and malariaCase["Household"]?.CaseInvestigationStatus != "Lost To Followup"
+              data.followups[caseLocation].casesForFullInvestigation.push malariaCase
+              data.followups["ALL"].casesForFullInvestigation.push malariaCase
+
+            if malariaCase['Household Members'].length > 0
+              malariaCase['Household Members'].forEach (member) ->
+                if Object.keys(member).find(((key) ->
+                  key.includes 'Time Outside Zanzibar'
+                ))
+                  data.individualClassification[caseLocation].withTravelHistory.push malariaCase
+                  data.individualClassification["ALL"].withTravelHistory.push malariaCase
+                if member.CaseCategory
+                  data.individualClassification[caseLocation][member.CaseCategory.toLowerCase()].push malariaCase
+                  data.individualClassification['ALL'][member.CaseCategory.toLowerCase()].push malariaCase
+                return
 
             if malariaCase.followedUp()
               data.passiveCases[caseLocation].indexCases.push malariaCase
@@ -323,7 +365,6 @@ class Reports
       startDate: "2014-10-01"
       endDate: "2014-12-01"
       success: (result) ->
-        console.log result
 
   @userAnalysis: (options) ->
     @userAnalysisForUsers
@@ -360,14 +401,6 @@ class Reports
 
     Coconut.quartiles = (values) ->
       [median,h1Values,h2Values] = Coconut.medianTimeWithHalves(values)
-      ###
-      console.log values
-      console.log h1Values
-      console.log h2Values
-      console.log Coconut.medianTime(h1Values)
-      console.log Coconut.medianTime(h2Values)
-      console.log "***"
-      ###
       [
         Coconut.medianTime(h1Values)
         median
@@ -589,8 +622,6 @@ class Reports
               errors["Missing #{aggregationArea}"][areaNameFromReport] = row.doc
               console.error "Can't find #{aggregationArea} #{areaNameFromReport}"
               area = "UNKNOWN: #{weeklyReport.Zone}-#{weeklyReport.District}-#{areaNameFromReport}"
-            #  console.log row.doc
-
             aggregatedData[period] = {} unless aggregatedData[period]
             aggregatedData[period][area] = _(cumulativeFields).clone() unless aggregatedData[period][area]
 
@@ -748,8 +779,6 @@ class Reports
   @aggregateWeeklyReportsAndFacilityTimeliness = (options) =>
     new Promise (resolve, reject) =>
 
-      console.log "ASDAS"
-
       data = await @aggregateWeeklyReports(options)
         .catch (error) => reject(error)
 
@@ -773,8 +802,6 @@ class Reports
             "followedUpWithin48Hours"
           ]).each (property) ->
             data.data[period][area][property] = caseData[property]
-
-      console.log data
       resolve(data)
 
 
@@ -796,8 +823,6 @@ class Reports
       aggregationArea = options.aggregationArea
       aggregationPeriod = options.aggregationPeriod
       facilityType = options.facilityType
-
-      console.log options
 
       Coconut.database.query "positiveFacilityCasesByDate",
         startkey: options.startDate
@@ -869,9 +894,6 @@ class Reports
                   "numberPositiveIndividuals"
                 ]).each (property) ->
                   aggregatedData[period][area][property] = 0 unless aggregatedData[period][area][property]
-                  console.log cases
-                  console.log caseId
-                  console.log property
 
                   aggregatedData[period][area][property]+= cases[caseId][property]()
 
@@ -884,7 +906,6 @@ class Reports
 
                 aggregatedData[period][area]["casesNotified"] = [] unless aggregatedData[period][area]["casesNotified"]
                 aggregatedData[period][area]["casesNotified"].push caseId
-            console.log aggregatedData
             resolve(aggregatedData)
 
 

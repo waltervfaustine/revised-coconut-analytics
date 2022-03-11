@@ -139,7 +139,6 @@ class IndividualClassificationView extends Backbone.View
       for row in result.rows
         if row.doc
           malariaCase = row.doc
-          #console.log row
           district = malariaCase["District"]
           @districtForCase[malariaCase["Malaria Case ID"]] = district
 
@@ -150,11 +149,8 @@ class IndividualClassificationView extends Backbone.View
           missingSummaries.push row.key.replace(/case_summary_/,"")
 
       if missingSummaries.length > 0
-        console.log missingSummaries
         await Case.updateSummaryForCases({caseIDs: missingSummaries})
         return @loadCaseSummaryData()
-
-
 
   district: => 
 
@@ -168,10 +164,6 @@ class IndividualClassificationView extends Backbone.View
       for row in @positiveIndividualsByDiagnosisDate
         category = row.value[1]
         district = @districtForCase[row.value[0]]
-
-        console.log row.value[0]
-        console.log district
-
         unless district
           @$("#messages").append "Can't find district for <a href='#show/case/#{row.value[0]}'>#{row.value[0]}</a><br/>"
           continue
@@ -215,9 +207,6 @@ class IndividualClassificationView extends Backbone.View
     for row in @positiveIndividualsByDiagnosisDate
       category = row.value[1]
       zone = @zoneForCase[row.value[0]]
-
-      console.log @zoneForCase
-      console.log row.value[0]
 
       aggregated[category][zone].push row.value[0]
 

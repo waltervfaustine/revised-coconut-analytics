@@ -96,13 +96,11 @@ class AnalysisView extends Backbone.View
       error: (error) -> console.error error
       success: (data) =>
         $("#analysis-spinner").hide()
-        headings = [
+        caseInvestigationHeadings = [
           options.aggregationLevel
           "Cases"
-          "Complete household visit"
+          "Fully Investigated"
           "%"
-          "Missing Sent Case Notification"
-          "Missing Received Case Notification"
           "Complete facility visit"
           "Without complete facility visit (but with case notification)"
           "%"
@@ -110,36 +108,83 @@ class AnalysisView extends Backbone.View
           "%"
           "Without complete household visit (but with complete facility visit)"
           "%"
-          "Without complete household visit within 48 hours"
+          "Without Full Investigation within 48 hours"
           "%"
+        ]
+
+        caseFollowUpHeadings = [
+          options.aggregationLevel
+          "Cases Notified"
+          "Missing sent Case Notification"
+          "Missing received Case Notification"
+          "Multiple notified"
+          "False positive"
+          "Cases for investigation"
+          "Cases Lost to follow-up"
+          "Cases for full investigation"
+          # "Household with more than one case"
+        ]
+
+        individualClassificationUpHeadings = [
+          options.aggregationLevel
+          "With Travel History"
+          "Imported"
+          "Indigenous"
+          "Introduced"
+          "Induced"
+          "Relapsing"
         ]
 
         $("#analysis").append "
 		  <div class='analysis dropDownBtn'>
 			  <div class='report-subtitle'><button class='mdl-button mdl-js-button mdl-button--icon'><i class='mdi mdi-play mdi-24px'></i></button>
-		  Cases Followed Up<small></small></div></div>
+		  Case Follow Up<small></small></div></div>
 		"
-        $("#analysis").append @createTable headings, "
+        $("#analysis").append @createTable caseFollowUpHeadings, "
           #{
             _.map(data.followups, (values,location) =>
               "
                 <tr>
                   <td class='mdl-data-table__cell--non-numeric'>#{location}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.allCases)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.casesWithCompleteHouseholdVisit)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(values.casesWithCompleteHouseholdVisit.length/values.allCases.length)}</td>
-                  <td class='missingUSSD details mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.missingUssdNotification)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.missingUssdNotification)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.missingCaseNotification)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.multipleNotified)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.falsePositive)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.casesForInvestigation)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableCaseGroup(values.lostToFollowUp)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableCaseGroup(values.casesForFullInvestigation)}</td>
+                  
+                </tr>
+              "
+            ).join("")
+          }
+        ", "cases-followed-up"
+
+        $("#analysis").append "
+		  <div class='analysis dropDownBtn'>
+			  <div class='report-subtitle'><button class='mdl-button mdl-js-button mdl-button--icon'><i class='mdi mdi-play mdi-24px'></i></button>
+		  Case Investigation<small></small></div></div>
+		"
+        $("#analysis").append @createTable caseInvestigationHeadings, "
+          #{
+            _.map(data.followups, (values,location) =>
+              "
+                <tr>
+                  <td class='mdl-data-table__cell--non-numeric'>#{location}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.casesForFullInvestigation)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.casesWithCompleteHouseholdVisit)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(values.casesWithCompleteHouseholdVisit.length/values.casesForFullInvestigation.length)}</td>
                   <td class='details mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.casesWithCompleteFacilityVisit)}</td>
                   #{
                     withoutcompletefacilityvisitbutwithcasenotification = _.difference(values.casesWithoutCompleteFacilityVisit,values.missingCaseNotification)
                     ""
                   }
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(withoutcompletefacilityvisitbutwithcasenotification)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(withoutcompletefacilityvisitbutwithcasenotification.length/values.allCases.length)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(withoutcompletefacilityvisitbutwithcasenotification.length/values.casesForFullInvestigation.length)}</td>
 
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.noFacilityFollowupWithin24Hours)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(values.noFacilityFollowupWithin24Hours.length/values.allCases.length)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(values.noFacilityFollowupWithin24Hours.length/values.casesForFullInvestigation.length)}</td>
 
 
                   #{
@@ -148,17 +193,17 @@ class AnalysisView extends Backbone.View
                   }
 
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(withoutcompletehouseholdvisitbutwithcompletefacility)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(withoutcompletehouseholdvisitbutwithcompletefacility.length/values.allCases.length)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(withoutcompletehouseholdvisitbutwithcompletefacility.length/values.casesForFullInvestigation.length)}</td>
 
 
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.noHouseholdFollowupWithin48Hours)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(values.noHouseholdFollowupWithin48Hours.length/values.allCases.length)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(values.noHouseholdFollowupWithin48Hours.length/values.casesForFullInvestigation.length)}</td>
 
                 </tr>
               "
             ).join("")
           }
-        ", "cases-followed-up"
+        ", "case-investigation"
 
         _([
           "Complete facility visit"
@@ -193,7 +238,7 @@ class AnalysisView extends Backbone.View
 
         ,2000
 
-        $("div#cases-followed-up span.toggle-btn").html "
+        $("div#case-investigation span.toggle-btn").html "
           <label class='mdl-switch mdl-js-switch mdl-js-ripple-effect' for='switch-details'>
             <input type='checkbox' id='switch-details' class='mdl-switch__input'>
             <span class='mdl-switch__label'>Toggle Details</span>
@@ -221,28 +266,29 @@ class AnalysisView extends Backbone.View
           "No of additional neighbor household members tested positive": HTMLHelpers.createDisaggregatableDocGroup(values.positiveIndividualsAtNeighborHouseholds.length,values.positiveIndividualsAtNeighborHouseholds)
         )
 
-
-
         $("#analysis").append "
-          <hr>
-          <div class='analysis dropDownBtn'>
-            <div class='report-subtitle'>
-              <button class='mdl-button mdl-js-button mdl-button--icon'>
-                <i class='mdi mdi-play mdi-24px'></i>
-              </button>
-		  		    Individual Classification<small></small>
-		  		  </div>
-          </div>
-
-          <div id='individual-classification' class='analysis-report dropdown-section'>
-          </div>
-        "
-
-        @individualClassificationView = new IndividualClassificationView()
-
-        @individualClassificationView.setElement("#individual-classification")
-        @individualClassificationView.render()
-
+		  <div class='analysis dropDownBtn'>
+			  <div class='report-subtitle'><button class='mdl-button mdl-js-button mdl-button--icon'><i class='mdi mdi-play mdi-24px'></i></button>
+		  Individual Classification<small></small></div></div>
+		"
+        $("#analysis").append @createTable individualClassificationUpHeadings, "
+          #{
+            _.map(data.individualClassification, (values,location) =>
+              "
+                <tr>
+                  <td class='mdl-data-table__cell--non-numeric'>#{location}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.withTravelHistory)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.imported)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.indigenous)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.introduced)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.induced)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.relapsing)}</td>
+                  
+                </tr>
+              "
+            ).join("")
+          }
+        ", "individual-classifications"
 
 
         $("#analysis").append "
@@ -314,8 +360,7 @@ class AnalysisView extends Backbone.View
             <span class='mdl-switch__label'>Toggle Unknown</span>
           </label>
         "
-        ###
-
+        
         $("#analysis").append "
           </div>
           <hr>
@@ -325,9 +370,9 @@ class AnalysisView extends Backbone.View
 		  	</div>
 		  </div>
         "
-    ###
-    #    $("#analysis").append @createTable "#{options.aggregationLevel}, Positive Cases (index & household), Slept under a net night before diagnosis, %, Household has been sprayed within last #{Coconut.IRSThresholdInMonths} months, %".split(/, */), "
-    ###
+    
+        $("#analysis").append @createTable "#{options.aggregationLevel}, Positive Cases (index & household), Slept under a net night before diagnosis, %, Household has been sprayed within last #{Coconut.IRSThresholdInMonths} months, %".split(/, */), "
+    
           #{
             _.map(data.netsAndIRS, (values,location) =>
               "
@@ -343,81 +388,6 @@ class AnalysisView extends Backbone.View
             ).join("")
           }
         ", 'nets-and-spraying'
-
-        $("#analysis").append "
-		  </div>
-          <hr>
-		  <div class='analysis dropDownBtn'>
-		  	<div class='report-subtitle'><button class='mdl-button mdl-js-button mdl-button--icon'><i class='mdi mdi-play mdi-24px'></i></button>
-		  		Travel History (within past month): <small>Includes index cases with complete household visits, positive index case household members, and positive neighbor household members</small>
-		  	</div>
-		  </div>
-        "
-        $("#analysis").append @createTable """
-          #{options.aggregationLevel}
-          Positive Cases
-          Only outside Zanzibar
-          %
-          Only within Zanzibar
-          %
-          Within Zanzibar and outside
-          %
-          Any Travel outside Zanzibar
-          %
-          Any Travel
-          %
-        """.split(/\n/), "
-          #{
-            _.map data.travel, (values,location) =>
-              "
-                <tr>
-                  <td class='mdl-data-table__cell--non-numeric'>#{location}</td>
-                  <td>#{HTMLHelpers.createDisaggregatableDocGroupWithLength(data.totalPositiveCases[location])}</td>
-                  #{
-                    _.map """
-                      Yes outside Zanzibar
-                      Yes within Zanzibar
-                      Yes within and outside Zanzibar
-                    """.split(/\n/), (travelReportedString) =>
-                      "
-                        <td>#{HTMLHelpers.createDisaggregatableDocGroupWithLength(data.travel[location][travelReportedString])}</td>
-                        <td>#{HTMLHelpers.formattedPercent(data.travel[location][travelReportedString].length / data.totalPositiveCases[location].length)}</td>
-                      "
-                    .join('')
-                  }
-                  #{
-                    anyTravelOutsideZanzibar = _.union(data.travel[location]["Yes outside Zanzibar"], data.travel[location]["Yes within and outside Zanzibar"])
-                    ""
-                  }
-                  <td>#{HTMLHelpers.createDisaggregatableDocGroupWithLength(anyTravelOutsideZanzibar)}</td>
-                  <td>#{HTMLHelpers.formattedPercent(anyTravelOutsideZanzibar.length / data.totalPositiveCases[location].length)}</td>
-                  <td>#{HTMLHelpers.createDisaggregatableDocGroupWithLength(data.travel[location]["Any travel"])}</td>
-                  <td>#{HTMLHelpers.formattedPercent(data.travel[location]["Any travel"].length / data.totalPositiveCases[location].length)}</td>
-
-                </tr>
-              "
-            .join("")
-          }
-		  </div>
-        "
-        , "travel-history-table"
-        ###
-
-        ###
-        This looks nice but breaks copy/paste
-        _.each [2..5], (column) ->
-          $($("#travel-history-table th")[column]).attr("colspan",2)
-        ###
-
-        ###
-        # dataTable doesn't help with copy/paste (disaggregated values appear) and sorting isn't sorted
-        $("table#cases-followed-up").dataTable
-          aaSorting: [[0,"asc"],[6,"desc"],[5,"desc"]]
-          iDisplayLength: 50
-          dom: 'T<"clear">lfrtip'
-          tableTools:
-            sSwfPath: "../js-libraries/copy_csv_xls.swf"
-        ###
 
         $("#analysis table").tablesorter
           widgets: ['zebra']
