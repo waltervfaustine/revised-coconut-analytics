@@ -9,8 +9,8 @@ npx browserify -v -t coffeeify --extension='.coffee' app/start.coffee -x moment 
 
 echo 'Rsyncing'
 # Note - don't exclude node modules since this is needed for cronjob scripts
-rsync --quiet --verbose --recursive --copy-links --exclude=node_modules ./ zanzibar.cococloud.co:/var/www/analytics/
-rsync --quiet --verbose --recursive --copy-links --exclude=node_modules ../__views/ zanzibar.cococloud.co:~/analytics-views/
+rsync --quiet --verbose --recursive --copy-links --exclude=node_modules ./ zanzibar.cococloud.co:/var/www/analytics-dev/
+rsync --quiet --verbose --recursive --copy-links --exclude=node_modules ../__views/ zanzibar.cococloud.co:~/analytics-views-dev/
 
 TARGETWITHPASSWORD=$1
 if [ $# -lt 1 ]
@@ -33,6 +33,6 @@ coffee executeViews.coffee $TARGETNOCREDENTIALS
 
 # Still need to push in data from the _docs database
 # TODO change this so that it only updates data from the _docs directory - couch push is slow
-echo "Couchapp pushing to $TARGETWITHPASSWORD"
-couchapp push $TARGETWITHPASSWORD
+#echo "Couchapp pushing to $TARGETWITHPASSWORD"
+#couchapp push $TARGETWITHPASSWORD
 
