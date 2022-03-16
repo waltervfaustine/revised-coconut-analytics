@@ -227,8 +227,8 @@ class Reports
               data.followups["ALL"].casesForFullInvestigation.push malariaCase
             
             if malariaCase["Household Members"].length > 1
-              positiveCases = (cases for cases in malariaCase["Household Members"] when (cases.MalariaMrdtTestResults != 'Negative'||cases.MalariaMicroscopyTestResults!='Negative'))
-              if positiveCases.length>1
+              positiveCases = (case1 for case1 in malariaCase["Household Members"] when ( case1.MalariaMrdtTestResults&&case1?.MalariaMrdtTestResults!='Negative')||(case1?.MalariaMicroscopyTestResults&&case1?.MalariaMicroscopyTestResults!='Negative'))
+              if positiveCases.length > 1
                 data.followups[caseLocation].houseWithMoreThanOnePositiveCase.push malariaCase
                 data.followups["ALL"].houseWithMoreThanOnePositiveCase.push malariaCase
 
