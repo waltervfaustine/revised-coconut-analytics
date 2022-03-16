@@ -126,6 +126,7 @@ class Reports
               casesForInvestigation: []
               casesForFullInvestigation: []
               lostToFollowUp: []
+              houseWithMoreThanOnePositiveCase: []
             data.passiveCases[aggregationName] =
               indexCases: []
               indexCaseHouseholdMembers: []
@@ -224,6 +225,12 @@ class Reports
             if malariaCase["Facility"]?.DmsoVerifiedResults != "False positive" and malariaCase["Facility"]?.DmsoVerifiedResults != "Duplicate notification" and malariaCase["Household"]?.CaseInvestigationStatus != "Lost To Followup"
               data.followups[caseLocation].casesForFullInvestigation.push malariaCase
               data.followups["ALL"].casesForFullInvestigation.push malariaCase
+            
+            if malariaCase["Household Members"].length > 1
+              positiveCases = (cases for cases in malariaCase["Household Members"] when (cases.MalariaMrdtTestResults != 'Negative'||cases.MalariaMicroscopyTestResults!='Negative'))
+              if positiveCases.length>1
+                data.followups[caseLocation].houseWithMoreThanOnePositiveCase.push malariaCase
+                data.followups["ALL"].houseWithMoreThanOnePositiveCase.push malariaCase
 
             if malariaCase['Household Members'].length > 0
               malariaCase['Household Members'].forEach (member) ->

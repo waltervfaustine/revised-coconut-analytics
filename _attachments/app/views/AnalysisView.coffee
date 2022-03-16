@@ -122,10 +122,10 @@ class AnalysisView extends Backbone.View
           "Cases for investigation"
           "Cases Lost to follow-up"
           "Cases for full investigation"
-          # "Household with more than one case"
+          "Household with more than one case"
         ]
 
-        individualClassificationUpHeadings = [
+        individualClassificationHeadings = [
           options.aggregationLevel
           "With Travel History"
           "Imported"
@@ -154,6 +154,7 @@ class AnalysisView extends Backbone.View
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.casesForInvestigation)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableCaseGroup(values.lostToFollowUp)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableCaseGroup(values.casesForFullInvestigation)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableCaseGroup(values.houseWithMoreThanOnePositiveCase)}</td>
                   
                 </tr>
               "
@@ -271,7 +272,7 @@ class AnalysisView extends Backbone.View
 			  <div class='report-subtitle'><button class='mdl-button mdl-js-button mdl-button--icon'><i class='mdi mdi-play mdi-24px'></i></button>
 		  Individual Classification<small></small></div></div>
 		"
-        $("#analysis").append @createTable individualClassificationUpHeadings, "
+        $("#analysis").append @createTable individualClassificationHeadings, "
           #{
             _.map(data.individualClassification, (values,location) =>
               "
