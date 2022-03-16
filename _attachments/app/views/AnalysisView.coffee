@@ -98,7 +98,7 @@ class AnalysisView extends Backbone.View
         $("#analysis-spinner").hide()
         caseInvestigationHeadings = [
           options.aggregationLevel
-          "Cases"
+          "Cases for full investigation"
           "Fully Investigated"
           "%"
           "Complete facility visit"
@@ -256,7 +256,7 @@ class AnalysisView extends Backbone.View
 
         @createTabulator "index-house-neighbors", (for location, values of data.passiveCases
           "#{options.aggregationLevel}": location
-          "No of cases followed up": HTMLHelpers.createDisaggregatableCaseGroup(values.indexCases)
+          "Fully investigated": HTMLHelpers.createDisaggregatableCaseGroup(values.indexCases)
           "No of additional index household members tested": HTMLHelpers.createDisaggregatableDocGroup(values.indexCaseHouseholdMembers.length,values.indexCaseHouseholdMembers)
           "No of additional index household members tested positive": HTMLHelpers.createDisaggregatableDocGroup(values.positiveIndividualsAtIndexHousehold.length,values.positiveIndividualsAtIndexHousehold)
           "% of index household members tested positive": HTMLHelpers.formattedPercent(values.positiveIndividualsAtIndexHousehold.length / values.indexCaseHouseholdMembers.length)
