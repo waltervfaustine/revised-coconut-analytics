@@ -99,6 +99,7 @@ class AnalysisView extends Backbone.View
         caseInvestigationHeadings = [
           options.aggregationLevel
           "Cases for full investigation"
+          "Cases investigated due to another case Investigation"
           "Fully Investigated"
           "%"
           "Complete facility visit"
@@ -174,6 +175,7 @@ class AnalysisView extends Backbone.View
                 <tr>
                   <td class='mdl-data-table__cell--non-numeric'>#{location}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.casesForFullInvestigation)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.casesInvestigatedDueToAnotherCaseInvestigation)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.casesWithCompleteHouseholdVisit)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.formattedPercent(values.casesWithCompleteHouseholdVisit.length/values.casesForFullInvestigation.length)}</td>
                   <td class='details mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.casesWithCompleteFacilityVisit)}</td>

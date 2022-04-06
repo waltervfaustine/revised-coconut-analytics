@@ -114,6 +114,7 @@ class Reports
             data.followups[aggregationName] =
               allCases: []
               casesWithCompleteFacilityVisit: []
+              casesInvestigatedDueToAnotherCaseInvestigation: []
               casesWithoutCompleteFacilityVisit: []
               casesWithCompleteHouseholdVisit: []
               casesWithoutCompleteHouseholdVisit: []
@@ -209,6 +210,10 @@ class Reports
             if malariaCase["Household"]?.CaseInvestigationStatus is "Lost To Followup"
               data.followups[caseLocation].lostToFollowUp.push malariaCase
               data.followups["ALL"].lostToFollowUp.push malariaCase
+
+            if malariaCase["Household"]?.HasThisCaseAlreadyBeenInvestigatedDueToAnotherHouseholdInvestigation is "Yes"
+              data.followups[caseLocation].casesInvestigatedDueToAnotherCaseInvestigation.push malariaCase
+              data.followups["ALL"].casesInvestigatedDueToAnotherCaseInvestigation.push malariaCase
 
             if malariaCase["Facility"]?.DmsoVerifiedResults is "Duplicate notification"
               data.followups[caseLocation].multipleNotified.push malariaCase
