@@ -32,7 +32,7 @@ GraphView = require './views/GraphView'
 IndividualsView = require './views/IndividualsView'
 CasesView = require './views/CasesView'
 EntomologyInvestigationsView = require './views/EntomologyInvestigationsView'
-EntomologySpecimensView = require './views/EntomologySpecimensView'
+EntomologyAnalysisView = require './views/EntomologyAnalysisView'
 EntomologyDashboardView = require './views/EntomologyDashboardView'
 
 
@@ -45,6 +45,7 @@ EntomologyDashboardView = require './views/EntomologyDashboardView'
 
 reportViews = {
   "Analysis": require './views/AnalysisView'
+  "EntomologyAnalysis": require './views/EntomologyAnalysisView'
   "Casefollowup": require './views/CaseFollowupView'
   "Individualclassification": require './views/IndividualClassificationView'
   "Fociclassification": require './views/FociClassificationView'
@@ -126,8 +127,8 @@ class Router extends Backbone.Router
     "entomology_dashboard/*options": "entomologyDashboard"
     "entomology_investigations": "entomologyInvestigations"
     "entomology_investigations/*options": "entomologyInvestigations"
-    "entomology_specimens": "entomologySpecimens"
-    "entomology_specimens/*options": "entomologySpecimens"
+    "entomology_analysis": "entomologyAnalysis"
+    "entomology_analysis/*options": "entomologyAnalysis"
     "*noMatch": "noMatch"
 
   entomologyDashboard: (optionString) =>
@@ -142,11 +143,11 @@ class Router extends Backbone.Router
     Coconut.entomologyInvestigationsView.options = @parseOptionsString(optionString)
     Coconut.entomologyInvestigationsView.render()
 
-  entomologySpecimens: (optionString) =>
-    Coconut.entomologySpecimensView = new EntomologySpecimensView()
-    Coconut.entomologySpecimensView.setElement $("#content")
-    Coconut.entomologySpecimensView.options = @parseOptionsString(optionString)
-    Coconut.entomologySpecimensView.render()
+  entomologyAnalysis: (optionString) =>
+    Coconut.entomologyAnalysisView = new EntomologyAnalysisView()
+    Coconut.entomologyAnalysisView.setElement $("#content")
+    Coconut.entomologyAnalysisView.options = @parseOptionsString(optionString)
+    Coconut.entomologyAnalysisView.render()
 
   findCase: (caseId) =>
     Coconut.findCaseView or= new FindCaseView()

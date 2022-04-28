@@ -2,6 +2,7 @@ _ = require 'underscore'
 moment = require 'moment'
 
 Case = require './Case'
+Specimen = require './Specimen'
 
 class Reports
 
@@ -76,6 +77,30 @@ class Reports
           .compact()
           .value()
         options.success? groupedResults or Promise.resolve(groupedResults)
+
+  @getSpecimens = (options) =>
+    Coconut.entomologyDatabase.query "specimensByDate",
+      # Note that these seem reversed due to descending order
+      startkey: moment(options.endDate).endOf("day").format(Coconut.config.dateFormat)
+      endkey: options.startDate
+      descending: true
+      include_docs: false
+    .catch (error) -> console.error error
+    .then (result) ->
+      specimenIDs = _.unique(_.pluck result.rows, "value")
+      groupedResults = _.chain(specimenIDs)
+        .groupBy (row) =>
+          row['adult-mosquito-collection-id']
+        .map (specimen) =>
+          specimen = new Specimen
+            results: specimen
+          if not options.mostSpecificLocation?
+            return specimen
+          else if  options.mostSpecificLocation.name is "ALL" or specimen.withinLocation(options.mostSpecificLocation)
+            return specimen
+        .compact()
+        .value()
+      options.success? groupedResults or Promise.resolve(groupedResults)
 
   # legacy support - use the static one instead
   getCases: (options) =>
@@ -326,6 +351,89 @@ class Reports
                   data.travel["ALL"][positiveIndividual.OvernightTravelinpastmonth].push positiveIndividual
                   data.travel["ALL"]["Any travel"].push positiveIndividual if positiveIndividual.OvernightTravelinpastmonth.match(/Yes/)
 
+          options.finished?(data)
+          resolve(data)
+  @specimensAggregatedForAnalysis = (options) =>
+    new Promise (resolve, reject) =>
+
+      data = {}
+
+      options.aggregationLevel ||= "DISTRICT"
+
+      # Hack required because we have multiple success callbacks
+      options.finished = options.success
+
+      # Refactor to use reporting database - will be faster and centralize calculations like is the case complete?
+
+      Reports.getSpecimens _.extend options,
+        success: (cases) =>
+
+          data.identificationAndAbundance = {}
+          data.vectorsPerMethodPerSite = {}
+
+          # Setup hashes for each table
+          aggregationNames = GeoHierarchy.all options.aggregationLevel
+          aggregationNames.push("UNKNOWN")
+          aggregationNames.push("ALL")
+          _.each aggregationNames, (aggregationName) ->
+            data.identificationAndAbundance[aggregationName] =
+              allVectors: []
+              anGambiaeComplex: []
+              anFunestus: []
+              anCostani: []
+              anMaculipalpis: []
+              anNili: []
+              otherSpecies: []
+
+            data.vectorsPerMethodPerSite[aggregationName] =
+              humanLandingCatchAnGambiae: []
+              humanLandingCatchAnFunestus:[]
+              pyrethrumSprayCatchAnGambiae: []
+              pyrethrumSprayCatchAnFunestus:[]
+              pitTrapAnGambiae: []
+              pitTrapAnFunestus:[]
+              cdcLightTrapAnGambiae: []
+              cdcLightTrapAnFunestus:[]
+              
+
+          _.each cases, (specimen) ->
+            caseLocation = specimen.locationBy(options.aggregationLevel) || "UNKNOWN"
+            if(specimen.morphologicalIdentification is "An gambiae complex")
+              data.identificationAndAbundance[caseLocation].anGambiaeComplex.push specimen
+              data.identificationAndAbundance["ALL"].anGambiaeComplex.push specimen
+              if(specimen.methodOfCollection is "Pyrethrum-Spray Catch (PSC)")
+                data.vectorsPerMethodPerSite[caseLocation].pyrethrumSprayCatchAnGambiae.push specimen
+              if(specimen.methodOfCollection is "Human-Landing Catch (HLC)")
+                data.vectorsPerMethodPerSite[caseLocation].humanLandingCatchAnGambiae.push specimen
+              if(specimen.methodOfCollection is "Pit-trap Catches (PTC)")
+                data.vectorsPerMethodPerSite[caseLocation].pitTrapAnGambiae.push specimen
+              if(specimen.methodOfCollection is "CDC-Light Trap Catches(LTC)")
+                data.vectorsPerMethodPerSite[caseLocation].cdcLightTrapAnGambiae.push specimen
+            if(specimen.morphologicalIdentification is "An funestus")
+              data.identificationAndAbundance[caseLocation].anFunestus.push specimen
+              data.identificationAndAbundance["ALL"].anFunestus.push specimen
+              if(specimen.methodOfCollection is "Pyrethrum-Spray Catch (PSC)")
+                data.vectorsPerMethodPerSite[caseLocation].pyrethrumSprayCatchAnFunestus.push specimen
+              if(specimen.methodOfCollection is "Human-Landing Catch (HLC)")
+                data.vectorsPerMethodPerSite[caseLocation].humanLandingCatchAnFunestus.push specimen
+              if(specimen.methodOfCollection is "Pit-trap Catches (PTC)")
+                data.vectorsPerMethodPerSite[caseLocation].pitTrapAnFunestus.push specimen
+              if(specimen.methodOfCollection is "CDC-Light Trap Catches(LTC)")
+                data.vectorsPerMethodPerSite[caseLocation].cdcLightTrapAnFunestus.push specimen
+            if(specimen.morphologicalIdentification is "An costani")
+              data.identificationAndAbundance[caseLocation].anCostani.push specimen
+              data.identificationAndAbundance["ALL"].anCostani.push specimen
+            if(specimen.morphologicalIdentification is "An maculipalpis")
+              data.identificationAndAbundance[caseLocation].anMaculipalpis.push specimen
+              data.identificationAndAbundance["ALL"].anMaculipalpis.push specimen
+            if(specimen.morphologicalIdentification is "An nili")
+              data.identificationAndAbundance[caseLocation].anNili.push specimen
+              data.identificationAndAbundance["ALL"].anNili.push specimen
+            if(specimen.morphologicalIdentification is "Other species")
+              data.identificationAndAbundance[caseLocation].otherSpecies.push specimen
+              data.identificationAndAbundance["ALL"].otherSpecies.push specimen
+            data.identificationAndAbundance[caseLocation].allVectors.push specimen
+            data.identificationAndAbundance["ALL"].allVectors.push specimen
           options.finished?(data)
           resolve(data)
 

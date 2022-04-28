@@ -130,9 +130,9 @@ class MenuView extends Backbone.View
         <div class='m-l-20 dropdown' id='drawer-activities'>
         #{
              (for linkUrl, linkText of {
-               entomology_dashboard: "Dashboard"
-               entomology_investigations: "Investigations"
-               entomology_specimens: "Specimens"
+              #  entomology_dashboard: "Dashboard"
+              #  entomology_investigations: "Investigations"
+               entomology_analysis: "Analysis"
              }
                "<a class='mdl-navigation__link activity__link' id = '#{linkUrl}' href='##{linkUrl}' data-title='Data'>#{linkText}</a>"
              ).join ""
