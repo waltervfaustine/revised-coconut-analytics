@@ -166,6 +166,79 @@ class GeoHierarchy
       alias: alias
     await Coconut.database.put(aliases)
 
+  addDistrict: (regionName, districtName) =>
+    gh = await Coconut.database.get("Geographic Hierarchy")
+    
+    region = @findOneRegion(regionName)
+    if !region
+      return "Region does not exist"
+
+    district = @validDistrict(districtName)
+    if district
+      return "District already exists"
+
+    uniqueId = (length=11) ->
+      id = ""
+      id += Math.random().toString(36).substr(2) while id.length < length
+      id.substr 0, length
+    districtId = uniqueId()    # => n5yjla3bd83
+
+    if districtId && region?.id
+      gh.units.push
+        name: districtName
+        parentId: region.id
+        level: 4
+        id: districtId
+      await Coconut.database.put(gh)
+
+  addShehia: (districtName, shehiaName) =>
+    gh = await Coconut.database.get("Geographic Hierarchy")
+    district = @findOneDistrict(districtName)
+    if !district
+      return "District does not exist"
+
+    shehia = @validShehia(shehiaName)
+    if shehia
+      return "Shehia already Exists"
+
+    uniqueId = (length=11) ->
+      id = ""
+      id += Math.random().toString(36).substr(2) while id.length < length
+      id.substr 0, length
+    shehiaId = uniqueId()    # => n5yjla3bd83
+
+    if shehiaId && district?.id
+      gh.units.push
+        name: shehiaName
+        parentId: district.id
+        level: 5
+        id: shehiaId
+      await Coconut.database.put(gh)    
+
+  addFacility: (shehiaName, facilityName) =>
+    gh = await Coconut.database.get("Geographic Hierarchy")
+    shehia = @findOneShehia(shehiaName)
+    if !shehia
+      return "Shehia does not exist"
+
+    facility = @validFacility(facilityName)
+    if facility
+      return "Facility already exists"
+
+    uniqueId = (length=11) ->
+      id = ""
+      id += Math.random().toString(36).substr(2) while id.length < length
+      id.substr 0, length
+    facilityId = uniqueId()    # => n5yjla3bd83
+
+    if facilityId && shehia?.id
+      gh.units.push
+        name: facilityName
+        parentId: shehia.id
+        level: 6
+        id: facilityId
+      await Coconut.database.put(gh)
+
   # function from legacy version #
 
   ###
@@ -320,6 +393,10 @@ class GeoHierarchy
       for ancestor in shehia.ancestors()
         if _(targetAncestors).contains ancestor
           return shehia
+
+  findOneRegion: (regionName) => @findOneMatchOrUndefined(regionName,"REGION")
+
+  findOneDistrict: (districtName) => @findOneMatchOrUndefined(districtName,"DISTRICT")
 
   findOneShehia: (shehiaName) => @findOneMatchOrUndefined(shehiaName, "SHEHIA")
 
