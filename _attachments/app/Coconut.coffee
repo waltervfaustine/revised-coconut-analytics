@@ -27,7 +27,8 @@ class Coconut
       else
         "https://#{username}:#{password}@zanzibar.cococloud.co/"
 
-    @database = new PouchDB("#{@databaseURL}/zanzibar", databaseOptions)
+    @databaseName = "zanzibar-development"
+    @database = new PouchDB("#{@databaseURL}/#{@databaseName}", databaseOptions)
     @reportingDatabase = new PouchDB("#{@databaseURL}/zanzibar-reporting", databaseOptions)
     @cachingDatabase = new PouchDB("coconut-zanzibar-caching")
     @weeklyFacilityDatabase = new PouchDB("#{@databaseURL}/zanzibar-weekly-facility")
