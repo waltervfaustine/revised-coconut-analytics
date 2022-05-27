@@ -41,7 +41,7 @@ class IndividualsView extends Backbone.View
       </div>
       <div id='dateSelector' style='display:inline-block'></div>
       <div id='dateDescription' style='display:inline-block;vertical-align:top;margin-top:10px'></div>
-      <div id='administrativeAreaSelector' style='display:inline-block;vertical-align:top;' />
+      <div id='administrativeAreaSelector' style='display:inline-block;vertical-align:top;'></div>
       <div class='shortcuts' style='margin-left:10px;display:inline-block;vertical-align:top'>
         Malaria Positive:<br/> #{
           (for value in ["All","true","false"]
