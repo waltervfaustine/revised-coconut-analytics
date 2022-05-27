@@ -2,15 +2,15 @@
 
 # TODO - put more in vendor
 echo "Browserifying and uglifying vendor.min.js"
-npx browserify  --debug -r moment -r jquery -r backbone -r pouchdb-core -r pouchdb-adapter-http -r pouchdb-mapreduce -r pouchdb-upsert -r underscore -r tabulator-tables | npx terser > vendor.min.js
+npx browserify -r moment -r jquery -r backbone -r pouchdb-core -r pouchdb-adapter-http -r pouchdb-mapreduce -r pouchdb-upsert -r underscore -r tabulator-tables | npx terser > vendor.min.js
 
 echo 'Browserifying and uglifying'
-npx browserify --debug -v -t coffeeify --extension='.coffee' app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables| npx terser > bundle.js
+npx browserify -v -t coffeeify --extension='.coffee' app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables| npx terser > bundle.js
 
 echo 'Rsyncing'
 # Note - don't exclude node modules since this is needed for cronjob scripts
-rsync --quiet --verbose --recursive --copy-links --exclude=node_modules ./ zanzibar.cococloud.co:/var/www/analytics-dev/
-rsync --quiet --verbose --recursive --copy-links --exclude=node_modules ../__views/ zanzibar.cococloud.co:~/analytics-views-dev/
+rsync --quiet --verbose --recursive --copy-links --exclude=node_modules ./ zanzibar.cococloud.co:/var/www/analytics/
+rsync --quiet --verbose --recursive --copy-links --exclude=node_modules ../__views/ zanzibar.cococloud.co:~/analytics-views/
 
 TARGETWITHPASSWORD=$1
 if [ $# -lt 1 ]
