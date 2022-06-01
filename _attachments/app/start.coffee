@@ -24,7 +24,6 @@ global.Env = {
   is_chrome: /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor)
 }
 
-
 Coconut.promptUntilCredentialsWork().then =>
 
   global.HTMLHelpers = require './HTMLHelpers'
@@ -32,6 +31,7 @@ Coconut.promptUntilCredentialsWork().then =>
   User = require './models/User'
   MenuView = require './views/MenuView'
   Config = require './models/Config'
+  AppConfig = require '../config.json'
   Router = require './Router'
   HeaderView = require './views/HeaderView'
   GeoHierarchyClass = require './models/GeoHierarchy'
@@ -41,8 +41,8 @@ Coconut.promptUntilCredentialsWork().then =>
   ChromeView = require './views/ChromeView'
 
 
-  username = Cookie.get("username")
-  password = Cookie.get("password")
+  username = AppConfig.username
+  password = AppConfig.password
 
   Coconut.plainCouchURL = Coconut.database.name.replace(/\/\/.*@/,"//").replace(/[^\/]+$/, "")
   # This sets a couchdb session which is necessary for lists, aka spreadsheet downloads
