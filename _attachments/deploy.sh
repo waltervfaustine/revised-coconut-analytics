@@ -1,23 +1,18 @@
 #!/bin/bash
 
-# TODO - put more in vendor
-echo "Browserifying and uglifying vendor.min.js"
-npx browserify  --debug -r moment -r jquery -r backbone -r pouchdb-core -r pouchdb-adapter-http -r pouchdb-mapreduce -r pouchdb-upsert -r underscore -r tabulator-tables | npx terser > vendor.min.js
-
-echo 'Browserifying and uglifying'
-npx browserify --debug -v -t coffeeify --extension='.coffee' app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables| npx terser > bundle.js
-
-echo 'Rsyncing'
-# Note - don't exclude node modules since this is needed for cronjob scripts
-rsync --quiet --verbose --recursive --copy-links --exclude=node_modules ./ zanzibar.cococloud.co:/var/www/analytics-dev/
-rsync --quiet --verbose --recursive --copy-links --exclude=node_modules ../__views/ zanzibar.cococloud.co:~/analytics-views-dev/
-
 TARGETWITHPASSWORD=$1
 if [ $# -lt 1 ]
   then
     printf "To update views you must specify the URL with username/password, e.g.\\n  ./deploy.sh https://admin:password@cococloud.co/zanzibar\\n"
     exit
 fi
+
+# TODO - put more in vendor
+echo "Browserifying and uglifying vendor.min.js"
+npx browserify -r moment -r jquery -r backbone -r pouchdb-core -r pouchdb-adapter-http -r pouchdb-mapreduce -r pouchdb-upsert -r underscore -r tabulator-tables | npx terser > vendor.min.js
+
+echo 'Browserifying and uglifying'
+npx browserify -v -t coffeeify --extension='.coffee' app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables| npx terser > bundle.js
 
 CREDENTIALS=$(echo $TARGETWITHPASSWORD | cut -f1 -d@ | cut -f 3 -d/)
 TARGETNOCREDENTIALS=$(echo $TARGETWITHPASSWORD | sed "s/$CREDENTIALS@//")

@@ -2,6 +2,7 @@ global.PouchDB = require 'pouchdb-browser'
 PouchDB.plugin(require('pouchdb-upsert'))
 BackbonePouch = require 'backbone-pouch'
 global.Cookie = require 'js-cookie'
+AppConfig = require '../config.json'
 moment = require 'moment'
 
 class Coconut
@@ -13,21 +14,20 @@ class Coconut
     endDate: moment().format("YYYY-MM-DD")
 
   setupDatabases: =>
-    username = Cookie.get("username") or prompt("Username:")
-    password = Cookie.get("password") or prompt("Password:")
-
-    Cookie.set("username", username)
-    Cookie.set("password", password)
+    username = AppConfig.username or prompt("Username:")
+    password = AppConfig.password or prompt("Password:")
 
     databaseOptions = {ajax: timeout: 1000 * 60 * 10} # Ten minutes
 
     @databaseURL =
       if window.location.origin.startsWith "http://localhost"
         "http://#{username}:#{password}@localhost:5984/"
-      else
-        "https://#{username}:#{password}@zanzibar.cococloud.co/"
+      else if AppConfig.targetUrl
+        "https://#{username}:#{password}@#{AppConfig.targetUrl}/"
+      else 
+        prompt("Database URL:")
 
-    @databaseName = "zanzibar-development"
+    @databaseName = AppConfig.targetDatabase or prompt("Database Name:")
     @database = new PouchDB("#{@databaseURL}/#{@databaseName}", databaseOptions)
     @reportingDatabase = new PouchDB("#{@databaseURL}/zanzibar-reporting", databaseOptions)
     @cachingDatabase = new PouchDB("coconut-zanzibar-caching")

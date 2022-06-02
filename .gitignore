@@ -1,8 +1,11 @@
+_attachments/config.json
 _attachments/vendor.min.js
 _attachments/bundle.js
 _attachments/npm-debug.log
 _attachments/node_modules/
+__views/urlWithCredentials.txt
 npm-debug.log
 .couchapprc
 **/node_modules
 **package-lock.json
+*.log
