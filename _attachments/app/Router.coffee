@@ -66,6 +66,9 @@ activityViews = {
   Issues: require './views/IssuesView'
   Messaging: require './views/MessagingView'
 }
+entomologyViews = {
+  Analysis: EntomologyAnalysisView
+}
 
 class Router extends Backbone.Router
   # caches views
@@ -127,8 +130,8 @@ class Router extends Backbone.Router
     "entomology_dashboard/*options": "entomologyDashboard"
     "entomology_investigations": "entomologyInvestigations"
     "entomology_investigations/*options": "entomologyInvestigations"
-    "entomology_analysis": "entomologyAnalysis"
-    "entomology_analysis/*options": "entomologyAnalysis"
+    "ento": "entomologyAnalysis"
+    "ento/*options": "entomologyAnalysis"
     "*noMatch": "noMatch"
 
   entomologyDashboard: (optionString) =>
@@ -142,12 +145,23 @@ class Router extends Backbone.Router
     Coconut.entomologyInvestigationsView.setElement $("#content")
     Coconut.entomologyInvestigationsView.options = @parseOptionsString(optionString)
     Coconut.entomologyInvestigationsView.render()
-
+    
   entomologyAnalysis: (optionString) =>
-    Coconut.entomologyAnalysisView = new EntomologyAnalysisView()
-    Coconut.entomologyAnalysisView.setElement $("#content")
-    Coconut.entomologyAnalysisView.options = @parseOptionsString(optionString)
-    Coconut.entomologyAnalysisView.render()
+    options = _(options?.split(/\//)).map (option) -> unescape(option)
+
+    _.each options, (option,index) =>
+      @reportViewOptions[option] = options[index+1] unless index % 2
+
+    defaultOptions = @setDefaultOptions()
+
+    _(defaultOptions).each (defaultValue, option) =>
+      @reportViewOptions[option] = @reportViewOptions[option] or defaultValue
+    @entoAnalysisView = new EntomologyAnalysisView() unless @entoAnalysisView
+    type = @reportViewOptions["type"]
+    @views[type] = new entomologyViews[type]() unless @views[type]
+    @appView.showView(@views[type])
+    @reportType = 'ento'
+    @showDateFilter(Coconut.router.reportViewOptions.startDate, Coconut.router.reportViewOptions.endDate, @views[type], @reportType)
 
   findCase: (caseId) =>
     Coconut.findCaseView or= new FindCaseView()

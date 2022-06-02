@@ -328,4 +328,38 @@ TabulatorView.showCasesDialog = (options) =>
   else
      casesTabulatorDialog.show() if !casesTabulatorDialog.open
 
+TabulatorView.showSpecimensDialog = (options) =>
+  unless specimensTabulatorDialog?
+    $("body").append "
+      <style>
+        dialog{
+          width: 80%;
+          height: 80%;
+        }
+      </style>
+      <dialog id='specimensTabulatorDialog'>
+        <div 
+          style='float:right; font-size: 2em; cursor:pointer;' 
+          onclick='document.getElementById(\"specimensTabulatorDialog\").close()'
+        >×</div>
+        <div id='specimens'></div>
+      </dialog>
+    "
+  tabulatorView = new TabulatorView()
+  tabulatorView.data = await Coconut.entomologyDatabase.allDocs
+      keys: for specimen in options.specimens
+        "#{specimen}"
+      include_docs: true
+    .then (result) =>
+      console.log result.rows
+      Promise.resolve result.rows
+  console.log tabulatorView.data
+  tabulatorView.tabulatorFields = options.fields or ["Specimen ID"]
+  tabulatorView.setElement($("#specimens"))
+  tabulatorView.render()
+  if (Env.is_chrome)
+     specimensTabulatorDialog.showModal() if !specimensTabulatorDialog.open
+  else
+     specimensTabulatorDialog.show() if !specimensTabulatorDialog.open
+
 module.exports = TabulatorView

@@ -24,6 +24,27 @@ global.disaggregateSet = (element) ->
 
   TabulatorView.showCasesDialog
     cases: cases
+global.disaggregateSpecimenSet = (element) ->
+  targetElement = $(element)
+  specimens = targetElement.siblings(".cases").children().map((i,element) => element.id).toArray()
+
+  inTabulator = targetElement.closest(".tabulator").length isnt 0
+
+
+  rowName = if inTabulator
+    targetElement.closest("div[role=row]").children().first().text()
+  else
+    targetElement.closest("tr").children().first().text()
+
+  headerName = if inTabulator
+    tableElement = targetElement.closest(".tabulator-cell")
+    targetElement.closest('.tabulator').find('.tabulator-headers').children().eq(tableElement.index()).text()
+  else
+    tableElement = targetElement.closest("td")
+    targetElement.closest('table').find('th').eq(tableElement.index()).text()
+
+  TabulatorView.showSpecimensDialog
+    specimens: specimens
 
   #SetsView.showDialog
   #  name: "#{rowName} #{headerName}"
@@ -54,10 +75,18 @@ class HTMLHelpers
       <i class=\"mdi #{options.iconText} #{options.buttonClass}\"></i>
       #{if(options.iconOnly && options.buttonClass is 'incomplete') then "<div class='overlay'>&nbsp;</div>" else ""}
       #{buttonText}</button>"
+  @createSpecimenLink = (options) ->
+    options.buttonText ?= options.specimenID
+    buttonText = if(options.iconOnly) then "" else options.buttonText
+    "<button class='mdl-button mdl-js-button mdl-button--icon mdl-button--primary #{options.specimenBtn}' id='#{options.specimenID}' data-anchor='#{if options.docId? then options.docId else ""}'>
+      <i class=\"mdi #{options.iconText} #{options.buttonClass}\"></i>
+      #{if(options.iconOnly && options.buttonClass is 'incomplete') then "<div class='overlay'>&nbsp;</div>" else ""}
+      #{buttonText}</button>"
 
 
   # Can handle either full case object or just array of caseIDs
   @createCasesLinks = (cases) ->
+    console.log(cases)
     _.map(@caseIds(cases), (caseID) =>
       @createCaseLink
         caseID: caseID
@@ -67,9 +96,22 @@ class HTMLHelpers
         caseBtn: 'caseBtn'
     ).join("")
 
+  @createSpecimensLinks = (specimens) ->
+    _.map(@specimenIds(specimens), (specimenID) =>
+      @createSpecimenLink
+        specimenID: specimenID
+        iconOnly: false
+        buttonClass: ''
+        iconText: ''
+        specimenBtn: 'caseBtn'
+    ).join("")
+
   @caseIds = (cases) ->
     _.map cases, (malariaCase) =>
       if typeof malariaCase == 'object' then (malariaCase.caseID or malariaCase.MalariaCaseID) else malariaCase
+  @specimenIds = (specimens) ->
+    _.map specimens, (specimen) =>
+      if typeof specimen == 'object' then (specimen.specimenID) else specimen
 
   @createDisaggregatableCaseGroup = (cases, text) ->
     text = cases.length unless text?
@@ -89,6 +131,15 @@ class HTMLHelpers
       </div>
     "
     ###
+  @createDisaggregatableSpecimenGroup = (specimens, text) ->
+    text = specimens.length unless text?
+    "
+      <button class='mdl-button mdl-js-button mdl-button--raised sort-value same-cell-disaggregatable' onClick='console.log(this);disaggregateSpecimenSet(this)'>#{text}</button>
+      <div class='cases' style='padding:10px; display:none'>
+        #{@createSpecimensLinks specimens}
+        <button onClick='copy(\"#{@specimenIds(specimens).join("\\n")}\")'>copy</button>
+      </div>
+    "
 
   @createDisaggregatableCaseGroupWithLength = (cases) ->
     text = if cases then cases.length or _(cases).size() else "-"

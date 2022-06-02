@@ -17,7 +17,9 @@ class Specimen
       if(resultDoc)
         @specimenID ?= resultDoc?["mosquito-specimen-id"]
         @District ?= resultDoc?["district"]
+        @district ?= resultDoc?["district"]
         @Shehia ?= resultDoc?["shehia"]
+        @shehia ?= resultDoc?["shehia"]
         @methodOfCollection ?= resultDoc?["method-of-collection"]
         @morphologicalIdentification ?= (resultDoc["morphological-identification-of-mosquito"]).replace('\n','')
      

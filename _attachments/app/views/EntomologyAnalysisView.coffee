@@ -18,7 +18,7 @@ class EntomologyAnalysisView extends Backbone.View
   el: "#content"
 
   events:
-    "click div.analysis.dropDownBtn": "showDropDown"
+    "click div.entomology.dropDownBtn": "showDropDown"
     "click #switch-details": "toggleDetails"
     "click #switch-unknown": "toggleGenderUnknown"
     "click button.caseBtn": "showCaseDialog"
@@ -27,8 +27,8 @@ class EntomologyAnalysisView extends Backbone.View
     "click .download-csv": "downloadCSV"
 
   showDropDown: (e) =>
-    target =  $(e.target).closest('.analysis')
-    target.next(".analysis-report").slideToggle()
+    target =  $(e.target).closest('.entomology')
+    target.next(".entomology-report").slideToggle()
     target.find("i").toggleClass('mdi-play mdi-menu-down-outline')
 
     for name, tabulatorTable of @tabulators # tabulator doesn't initialize properly when hidden
@@ -51,7 +51,7 @@ class EntomologyAnalysisView extends Backbone.View
       </style>
       <dialog id='caseDialog'></dialog>
       <div id='dateSelector'></div>
-      <div id='analysis'>
+      <div id='entomology'>
       <hr/>
       Aggregation Type:
       <input name='aggregationLevel' type='radio' #{if Coconut.router.reportViewOptions.aggregationLevel is "District" then "checked='true'" else ""} value='District'>&nbsp; District</input>
@@ -102,12 +102,12 @@ class EntomologyAnalysisView extends Backbone.View
           "Total An funestus s.l(n)"
         ]
 
-        $("#analysis").append "
-        <div class='analysis dropDownBtn'>
+        $("#entomology").append "
+        <div class='entomology dropDownBtn'>
           <div class='report-subtitle'><button class='mdl-button mdl-js-button mdl-button--icon'><i class='mdi mdi-play mdi-24px'></i></button>
           Malaria vector abundance, Morphological identification and distribution<small></small></div></div>
       "
-        $("#analysis").append @createTable identificationAndAbundanceHeadings, "
+        $("#entomology").append @createTable identificationAndAbundanceHeadings, "
           #{
             _.map(data.identificationAndAbundance, (values,location) =>
               totalCount = values.allVectors?.length
@@ -137,12 +137,12 @@ class EntomologyAnalysisView extends Backbone.View
         ", "identification-and-abundance"
         
 
-        $("#analysis").append "
-        <div class='analysis dropDownBtn'>
+        $("#entomology").append "
+        <div class='entomology dropDownBtn'>
           <div class='report-subtitle'><button class='mdl-button mdl-js-button mdl-button--icon'><i class='mdi mdi-play mdi-24px'></i></button>
           Number of vectors collected per method per site ignore sprayed and unsprayed<small></small></div></div>
       "
-        $("#analysis").append @createTable vectorsPerMethodPerSiteHeadings, "
+        $("#entomology").append @createTable vectorsPerMethodPerSiteHeadings, "
           #{
             _.map(data.vectorsPerMethodPerSite, (values,location) =>
               totalAnGambiae = values.humanLandingCatchAnGambiae?.length+values.pyrethrumSprayCatchAnGambiae?.length+values.pitTrapAnGambiae?.length+ values.cdcLightTrapAnGambiae?.length
@@ -150,14 +150,14 @@ class EntomologyAnalysisView extends Backbone.View
               "
                 <tr>
                   <td class='mdl-data-table__cell--non-numeric'>#{location}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{values.humanLandingCatchAnGambiae?.length}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{values.humanLandingCatchAnFunestus?.length}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{values.pyrethrumSprayCatchAnGambiae?.length}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{values.pyrethrumSprayCatchAnFunestus?.length}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{values.pitTrapAnGambiae?.length}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{ values.pitTrapAnFunestus?.length}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{ values.cdcLightTrapAnGambiae?.length}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{ values.cdcLightTrapAnFunestus?.length}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.humanLandingCatchAnGambiae)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.humanLandingCatchAnFunestus)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.pyrethrumSprayCatchAnGambiae)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.pyrethrumSprayCatchAnFunestus)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.pitTrapAnGambiae)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableSpecimenGroup(values.pitTrapAnFunestus)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableSpecimenGroup(values.cdcLightTrapAnGambiae)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableSpecimenGroup(values.cdcLightTrapAnFunestus)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{ totalAnGambiae}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{ totalAnFunestus}</td>
                 </tr>
@@ -166,7 +166,7 @@ class EntomologyAnalysisView extends Backbone.View
           }
         ", "vectors-per-method-per-site"
 
-        $("#analysis table").tablesorter
+        $("#entomology table").tablesorter
           widgets: ['zebra']
           sortList: [[0,0]]
           textExtraction: (node) ->
@@ -196,8 +196,9 @@ class EntomologyAnalysisView extends Backbone.View
     else ""
 
   createTabulator: (id, data) =>
-    @$("#analysis").append "
-      <div class='analysis-report dropdown-section'>
+    console.log data
+    @$("#entomology").append "
+      <div class='entomology-report dropdown-section'>
         <button class='download-csv' data-tabulator-name='#{id}'>Download CSV</button>
         <div id='#{id}'/>
       </div>
@@ -223,7 +224,7 @@ class EntomologyAnalysisView extends Backbone.View
 
   createTable: (headerValues, rows, id, colspan = 1) ->
     "
-      <div id='#{id}' class='analysis-report dropdown-section'>
+      <div id='#{id}' class='entomology-report dropdown-section'>
       <div class='scroll-div'>
         <div style='font-style:italic; padding-right: 30px'>Click on a column heading to sort. <span class='toggle-btn f-right'></span> </div>
         <table #{if id? then "id=#{id}" else ""} class='tablesorter mdl-data-table mdl-js-data-table mdl-shadow--2dp'>
