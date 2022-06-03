@@ -366,7 +366,7 @@ class Reports
       # Refactor to use reporting database - will be faster and centralize calculations like is the case complete?
 
       Reports.getSpecimens _.extend options,
-        success: (cases) =>
+        success: (specimens) =>
 
           data.identificationAndAbundance = {}
           data.vectorsPerMethodPerSite = {}
@@ -396,7 +396,7 @@ class Reports
               cdcLightTrapAnFunestus:[]
               
 
-          _.each cases, (specimen) ->
+          _.each specimens, (specimen) ->
             caseLocation = specimen.locationBy(options.aggregationLevel) || "UNKNOWN"
             if(specimen.morphologicalIdentification is "An gambiae complex")
               data.identificationAndAbundance[caseLocation].anGambiaeComplex.push specimen
