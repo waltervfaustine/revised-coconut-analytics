@@ -67,7 +67,7 @@ activityViews = {
   Messaging: require './views/MessagingView'
 }
 entomologyViews = {
-  Analysis: EntomologyAnalysisView
+  EntoAnalysis: EntomologyAnalysisView
 }
 
 class Router extends Backbone.Router
@@ -77,6 +77,7 @@ class Router extends Backbone.Router
   # holds option pairs for more complex URLs like for reports
   reportViewOptions: {}
   activityViewOptions: {}
+  entomologyViewOptions: {}
   dateSelectorOptions: {}
   noLogin = ["login", "logout", "reset_password"]
   execute: (callback, args, name) ->
@@ -150,18 +151,18 @@ class Router extends Backbone.Router
     options = _(options?.split(/\//)).map (option) -> unescape(option)
 
     _.each options, (option,index) =>
-      @reportViewOptions[option] = options[index+1] unless index % 2
+      @entomologyViewOptions[option] = options[index+1] unless index % 2
 
-    defaultOptions = @setDefaultOptions()
+    defaultOptions = @setDefaultOptions("EntoAnalysis")
 
     _(defaultOptions).each (defaultValue, option) =>
-      @reportViewOptions[option] = @reportViewOptions[option] or defaultValue
+      @entomologyViewOptions[option] = @entomologyViewOptions[option] or defaultValue
     @entoAnalysisView = new EntomologyAnalysisView() unless @entoAnalysisView
-    type = @reportViewOptions["type"]
+    type = @entomologyViewOptions["type"]
     @views[type] = new entomologyViews[type]() unless @views[type]
     @appView.showView(@views[type])
     @reportType = 'ento'
-    @showDateFilter(Coconut.router.reportViewOptions.startDate, Coconut.router.reportViewOptions.endDate, @views[type], @reportType)
+    @showDateFilter(Coconut.router.entomologyViewOptions.startDate, Coconut.router.entomologyViewOptions.endDate, @views[type], @reportType)
 
   findCase: (caseId) =>
     Coconut.findCaseView or= new FindCaseView()
@@ -505,10 +506,10 @@ class Router extends Backbone.Router
     Coconut.dateSelectorView.reportType = reportType
     Coconut.dateSelectorView.render()
 
-  setDefaultOptions: () ->
+  setDefaultOptions: (type) ->
     return {
-       type: "Analysis"
-       startDate:  @defaultStartDate()
+       type: type || "Analysis"
+       startDate: @defaultStartDate()
        endDate: @defaultEndDate()
        aggregationLevel: "District"
        mostSpecificLocationSelected: "ALL"

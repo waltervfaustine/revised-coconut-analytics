@@ -34,7 +34,7 @@ class EntomologyAnalysisView extends Backbone.View
     for name, tabulatorTable of @tabulators # tabulator doesn't initialize properly when hidden
       tabulatorTable.redraw()
   updateAnalysis: (e) =>
-    Coconut.router.reportViewOptions.aggregationLevel = @$("[name=aggregationLevel]:checked").val()
+    Coconut.router.entomologyViewOptions.aggregationLevel = @$("[name=aggregationLevel]:checked").val()
     @render()
     
   render: =>
@@ -54,13 +54,13 @@ class EntomologyAnalysisView extends Backbone.View
       <div id='entomology'>
       <hr/>
       Aggregation Type:
-      <input name='aggregationLevel' type='radio' #{if Coconut.router.reportViewOptions.aggregationLevel is "District" then "checked='true'" else ""} value='District'>&nbsp; District</input>
-      <input name='aggregationLevel' type='radio' #{if Coconut.router.reportViewOptions.aggregationLevel is "Shehia" then "checked='true'" else ""}  value='Shehia'>&nbsp; Shehia</input>
+      <input name='aggregationLevel' type='radio' #{if Coconut.router.entomologyViewOptions.aggregationLevel is "District" then "checked='true'" else ""} value='District'>&nbsp; District</input>
+      <input name='aggregationLevel' type='radio' #{if Coconut.router.entomologyViewOptions.aggregationLevel is "Shehia" then "checked='true'" else ""}  value='Shehia'>&nbsp; Shehia</input>
       <div style='font-style:italic; margin-top: 10px'>Click on arrow button/title to show table.</div>
       <hr/>
       </div>
     "
-    options = $.extend({},Coconut.router.reportViewOptions)
+    options = $.extend({},Coconut.router.entomologyViewOptions)
 
     @startDate = options.startDate
     @endDate = options.endDate
