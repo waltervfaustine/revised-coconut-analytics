@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "install-server": "npm install --no-optional --unsafe-perm"
+    "install-server": "npm install --no-optional --unsafe-perm",
     "postinstall": "npm run venderify && npm run bundlify",
     "venderify": "npx browserify -v -t coffeeify --extension='.coffee' app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables| npx terser > bundle.js",
     "bundlify": "npx browserify -r moment -r jquery -r backbone -r pouchdb-core -r pouchdb-adapter-http -r pouchdb-mapreduce -r pouchdb-upsert -r underscore -r tabulator-tables | npx terser > vendor.min.js"
