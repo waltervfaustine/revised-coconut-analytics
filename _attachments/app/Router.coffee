@@ -147,9 +147,8 @@ class Router extends Backbone.Router
     Coconut.entomologyInvestigationsView.options = @parseOptionsString(optionString)
     Coconut.entomologyInvestigationsView.render()
     
-  entomologyAnalysis: (optionString) =>
+  entomologyAnalysis: (options) =>
     options = _(options?.split(/\//)).map (option) -> unescape(option)
-
     _.each options, (option,index) =>
       @entomologyViewOptions[option] = options[index+1] unless index % 2
 

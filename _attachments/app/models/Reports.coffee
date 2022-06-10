@@ -366,8 +366,7 @@ class Reports
       # Refactor to use reporting database - will be faster and centralize calculations like is the case complete?
 
       Reports.getSpecimens _.extend options,
-        success: (specimens) =>
-
+        success: (cases) =>
           data.identificationAndAbundance = {}
           data.vectorsPerMethodPerSite = {}
 
@@ -384,6 +383,7 @@ class Reports
               anMaculipalpis: []
               anNili: []
               otherSpecies: []
+              total: []
 
             data.vectorsPerMethodPerSite[aggregationName] =
               humanLandingCatchAnGambiae: []
@@ -394,13 +394,19 @@ class Reports
               pitTrapAnFunestus:[]
               cdcLightTrapAnGambiae: []
               cdcLightTrapAnFunestus:[]
+              totalAnGambiae: []
+              totalAnFunestus :[]
               
 
-          _.each specimens, (specimen) ->
+          _.each cases, (specimen) ->
             caseLocation = specimen.locationBy(options.aggregationLevel) || "UNKNOWN"
+            data.identificationAndAbundance["ALL"].total.push specimen
+            data.identificationAndAbundance[caseLocation].total.push specimen
             if(specimen.morphologicalIdentification is "An gambiae complex")
               data.identificationAndAbundance[caseLocation].anGambiaeComplex.push specimen
               data.identificationAndAbundance["ALL"].anGambiaeComplex.push specimen
+              data.vectorsPerMethodPerSite[caseLocation].totalAnGambiae.push specimen
+              data.vectorsPerMethodPerSite["ALL"].totalAnGambiae.push specimen
               if(specimen.methodOfCollection is "Pyrethrum-Spray Catch (PSC)")
                 data.vectorsPerMethodPerSite[caseLocation].pyrethrumSprayCatchAnGambiae.push specimen
               if(specimen.methodOfCollection is "Human-Landing Catch (HLC)")
@@ -412,6 +418,8 @@ class Reports
             if(specimen.morphologicalIdentification is "An funestus")
               data.identificationAndAbundance[caseLocation].anFunestus.push specimen
               data.identificationAndAbundance["ALL"].anFunestus.push specimen
+              data.vectorsPerMethodPerSite[caseLocation].totalAnFunestus.push specimen
+              data.vectorsPerMethodPerSite["ALL"].totalAnFunestus.push specimen
               if(specimen.methodOfCollection is "Pyrethrum-Spray Catch (PSC)")
                 data.vectorsPerMethodPerSite[caseLocation].pyrethrumSprayCatchAnFunestus.push specimen
               if(specimen.methodOfCollection is "Human-Landing Catch (HLC)")

@@ -116,19 +116,19 @@ class EntomologyAnalysisView extends Backbone.View
               "
                 <tr>
                   <td class='mdl-data-table__cell--non-numeric'>#{location}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{values.anGambiaeComplex?.length}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.anGambiaeComplex)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{(values.anGambiaeComplex?.length/values.allVectors?.length)*100}%</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{values.anFunestus?.length}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.anFunestus)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{(values.anFunestus?.length/values.allVectors?.length)*100}%</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{values.anCostani?.length}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.anCostani)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{(values.anCostani?.length/values.allVectors?.length)*100}%</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{values.anMaculipalpis?.length}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.anMaculipalpis)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{(values.anMaculipalpis?.length/values.allVectors?.length)*100}%</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{values.anNili?.length}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.anNili)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{(values.anNili?.length/values.allVectors?.length)*100}%</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{ values.otherSpecies?.length}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.otherSpecies)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{(values.otherSpecies?.length/values.allVectors?.length)*100}%</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{ totalCount}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.total)}</td>
                   
                 </tr>
               "
@@ -145,8 +145,6 @@ class EntomologyAnalysisView extends Backbone.View
         $("#entomology").append @createTable vectorsPerMethodPerSiteHeadings, "
           #{
             _.map(data.vectorsPerMethodPerSite, (values,location) =>
-              totalAnGambiae = values.humanLandingCatchAnGambiae?.length+values.pyrethrumSprayCatchAnGambiae?.length+values.pitTrapAnGambiae?.length+ values.cdcLightTrapAnGambiae?.length
-              totalAnFunestus = values.humanLandingCatchAnFunestus?.length+values.pyrethrumSprayCatchAnFunestus?.length+values.pitTrapAnFunestus?.length+ values.cdcLightTrapAnFunestus?.length
               "
                 <tr>
                   <td class='mdl-data-table__cell--non-numeric'>#{location}</td>
@@ -155,11 +153,11 @@ class EntomologyAnalysisView extends Backbone.View
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.pyrethrumSprayCatchAnGambiae)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.pyrethrumSprayCatchAnFunestus)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.pitTrapAnGambiae)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableSpecimenGroup(values.pitTrapAnFunestus)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableSpecimenGroup(values.cdcLightTrapAnGambiae)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{ HTMLHelpers.createDisaggregatableSpecimenGroup(values.cdcLightTrapAnFunestus)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{ totalAnGambiae}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{ totalAnFunestus}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.pitTrapAnFunestus)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.cdcLightTrapAnGambiae)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.cdcLightTrapAnFunestus)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.totalAnGambiae)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.totalAnFunestus)}</td>
                 </tr>
               "
             ).join("")
