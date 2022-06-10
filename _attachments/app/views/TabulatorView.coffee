@@ -184,8 +184,8 @@ class TabulatorView extends Backbone.View
   addAdministrativeLevelsIfMissing: => # Allows filtering by any admin level
     if not @data[0]?["Administrative Levels"] and @data[0]["district"] and @data[0]["shehia"]
       for row,index in @data
-        district = row["district"]
-        shehia = row["shehia"]
+        district = row?["district"]
+        shehia = row?["shehia"]
         if district and shehia
           districtAncestors = _(GeoHierarchy.findFirst(district, "DISTRICT")?.ancestors()).pluck "name"
           row["Administrative Levels"] = (districtAncestors.reverse().concat(district).concat(shehia)).join(",")
@@ -351,9 +351,7 @@ TabulatorView.showSpecimensDialog = (options) =>
         "#{specimen}"
       include_docs: true
     .then (result) =>
-      console.log result.rows
       Promise.resolve result.rows
-  console.log tabulatorView.data
   tabulatorView.tabulatorFields = options.fields or ["Specimen ID"]
   tabulatorView.setElement($("#specimens"))
   tabulatorView.render()

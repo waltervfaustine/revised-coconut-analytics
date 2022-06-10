@@ -84,13 +84,15 @@ class Reports
       startkey: moment(options.endDate).endOf("day").format(Coconut.config.dateFormat)
       endkey: options.startDate
       descending: true
-      include_docs: false
+      include_docs: true
     .catch (error) -> console.error error
     .then (result) ->
-      specimenIDs = _.unique(_.pluck result.rows, "value")
+      specimenData = _.map(result.rows, (res)->
+        { ...res.value, id:res.doc._id })
+      specimenIDs = _.unique(specimenData)
       groupedResults = _.chain(specimenIDs)
         .groupBy (row) =>
-          row['adult-mosquito-collection-id']
+          row['id']
         .map (specimen) =>
           specimen = new Specimen
             results: specimen
@@ -409,12 +411,16 @@ class Reports
               data.vectorsPerMethodPerSite["ALL"].totalAnGambiae.push specimen
               if(specimen.methodOfCollection is "Pyrethrum-Spray Catch (PSC)")
                 data.vectorsPerMethodPerSite[caseLocation].pyrethrumSprayCatchAnGambiae.push specimen
+                data.vectorsPerMethodPerSite["ALL"].pyrethrumSprayCatchAnGambiae.push specimen
               if(specimen.methodOfCollection is "Human-Landing Catch (HLC)")
                 data.vectorsPerMethodPerSite[caseLocation].humanLandingCatchAnGambiae.push specimen
+                data.vectorsPerMethodPerSite["ALL"].humanLandingCatchAnGambiae.push specimen
               if(specimen.methodOfCollection is "Pit-trap Catches (PTC)")
                 data.vectorsPerMethodPerSite[caseLocation].pitTrapAnGambiae.push specimen
+                data.vectorsPerMethodPerSite["ALL"].pitTrapAnGambiae.push specimen
               if(specimen.methodOfCollection is "CDC-Light Trap Catches(LTC)")
                 data.vectorsPerMethodPerSite[caseLocation].cdcLightTrapAnGambiae.push specimen
+                data.vectorsPerMethodPerSite["ALL"].cdcLightTrapAnGambiae.push specimen
             if(specimen.morphologicalIdentification is "An funestus")
               data.identificationAndAbundance[caseLocation].anFunestus.push specimen
               data.identificationAndAbundance["ALL"].anFunestus.push specimen
@@ -422,12 +428,16 @@ class Reports
               data.vectorsPerMethodPerSite["ALL"].totalAnFunestus.push specimen
               if(specimen.methodOfCollection is "Pyrethrum-Spray Catch (PSC)")
                 data.vectorsPerMethodPerSite[caseLocation].pyrethrumSprayCatchAnFunestus.push specimen
+                data.vectorsPerMethodPerSite["ALL"].pyrethrumSprayCatchAnFunestus.push specimen
               if(specimen.methodOfCollection is "Human-Landing Catch (HLC)")
                 data.vectorsPerMethodPerSite[caseLocation].humanLandingCatchAnFunestus.push specimen
+                data.vectorsPerMethodPerSite["ALL"].humanLandingCatchAnFunestus.push specimen
               if(specimen.methodOfCollection is "Pit-trap Catches (PTC)")
                 data.vectorsPerMethodPerSite[caseLocation].pitTrapAnFunestus.push specimen
+                data.vectorsPerMethodPerSite["ALL"].pitTrapAnFunestus.push specimen
               if(specimen.methodOfCollection is "CDC-Light Trap Catches(LTC)")
                 data.vectorsPerMethodPerSite[caseLocation].cdcLightTrapAnFunestus.push specimen
+                data.vectorsPerMethodPerSite["ALL"].cdcLightTrapAnFunestus.push specimen
             if(specimen.morphologicalIdentification is "An costani")
               data.identificationAndAbundance[caseLocation].anCostani.push specimen
               data.identificationAndAbundance["ALL"].anCostani.push specimen

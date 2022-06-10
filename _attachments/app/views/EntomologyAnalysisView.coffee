@@ -117,17 +117,17 @@ class EntomologyAnalysisView extends Backbone.View
                 <tr>
                   <td class='mdl-data-table__cell--non-numeric'>#{location}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.anGambiaeComplex)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{(values.anGambiaeComplex?.length/values.allVectors?.length)*100}%</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{((values.anGambiaeComplex?.length/values.allVectors?.length)*100).toFixed(2)}%</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.anFunestus)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{(values.anFunestus?.length/values.allVectors?.length)*100}%</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{((values.anFunestus?.length/values.allVectors?.length)*100).toFixed(2)}%</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.anCostani)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{(values.anCostani?.length/values.allVectors?.length)*100}%</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{((values.anCostani?.length/values.allVectors?.length)*100).toFixed(2)}%</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.anMaculipalpis)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{(values.anMaculipalpis?.length/values.allVectors?.length)*100}%</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{((values.anMaculipalpis?.length/values.allVectors?.length)*100).toFixed(2)}%</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.anNili)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{(values.anNili?.length/values.allVectors?.length)*100}%</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{((values.anNili?.length/values.allVectors?.length)*100).toFixed(2)}%</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.otherSpecies)}</td>
-                  <td class='mdl-data-table__cell--non-numeric'>#{(values.otherSpecies?.length/values.allVectors?.length)*100}%</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{((values.otherSpecies?.length/values.allVectors?.length)*100).toFixed(2)}%</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableSpecimenGroup(values.total)}</td>
                   
                 </tr>

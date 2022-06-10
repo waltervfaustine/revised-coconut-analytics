@@ -10,12 +10,12 @@ TertiaryIndex = require './TertiaryIndex'
 class Specimen
   
   constructor: (options) ->
-    @specimenID = options?.specimenID
+    @specimenID = options?.specimenIDs
     @loadData(options.results) if options?.results
   loadData: (resultDocs) ->
     _.each resultDocs, (resultDoc) => 
       if(resultDoc)
-        @specimenID ?= resultDoc?["mosquito-specimen-id"]
+        @specimenID ?= resultDoc?["id"]
         @District ?= resultDoc?["district"]
         @district ?= resultDoc?["district"]
         @Shehia ?= resultDoc?["shehia"]
