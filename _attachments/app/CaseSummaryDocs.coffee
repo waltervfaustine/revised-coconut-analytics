@@ -47,22 +47,6 @@ Backbone.sync = BackbonePouch.sync
   db: Coconut.database
   fetch: 'query'
 
-Coconut.database.get "coconut.config"
-.then (doc) ->
-  Coconut.config = doc
-  Coconut.config.role_types = if Coconut.config.role_types then Coconut.config.role_types.split(",") else ["admin", "reports"]
-
-
-  await Coconut.database.allDocs
-    startkey: "user"
-    endkey: "user\uf000"
-    include_docs: true
-  .then (result) =>
-    Coconut.nameByUsername = {}
-    for row in result.rows
-      Coconut.nameByUsername[row.id.replace(/user./,"")] = row.doc.name
-    Promise.resolve()
-
   QuestionCollection = require './models/QuestionCollection'
   #DhisOrganisationUnits = require './models/DhisOrganisationUnits'
   GeoHierarchyClass = require './models/GeoHierarchy'
