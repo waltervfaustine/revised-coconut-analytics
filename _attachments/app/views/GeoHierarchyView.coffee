@@ -1,574 +1,203 @@
 _ = require 'underscore'
-titleize = require 'underscore.string/titleize'
+$ = require 'jquery'
+Backbone = require 'backbone'
+Backbone.$  = $
+moment = require 'moment'
+require 'tablesorter'
+Dialog = require './Dialog'
+humanize = require 'underscore.string/humanize'
+Form2js = require 'form2js'
+js2form = require 'form2js'
 
-GeoJsonLookup = require 'geojson-geometries-lookup'
+Tabulator = require 'tabulator-tables'
 
-#Fuse = require 'fuse.js'
+class GeoHierarchyView extends Backbone.View
+  el: '#content'
 
+  events:
+    "click #updateFromDhis": "updateFromDhis"
+    "click #download": "csv"
+    "click #new-district-btn": "createDistrict"
+    "click #new-shehia-btn": "createShehia"
+    "click #new-facility-btn": "createFacility"
+    "click .addAlias": "addAlias"
+    "click button#ghSave": "addGeoLocation"
+    "click button#ghCancel": "formCancel"
+    "click button#buttonYes": "deleteGeo"
 
-levelMappings =
-  "MINISTRY OF HEALTH":"NATIONAL"
-  "ZONE":"ISLANDS"
-  "REGION":"REGIONS"
-  "DISTRICT":"DISTRICTS"
-  "FACILITY":"HEALTH FACILITIES"
-  "SHEHIA": "SHEHIAS"
+  createDistrict: (e) =>
+    e.preventDefault
+    @mode = 'district'
+    dialogTitle = "Add New District"
+    Dialog.create(@dialogDistrict, dialogTitle)
+    $('form#district input').val('')
+    return false
 
+  createShehia: (e) =>
+    e.preventDefault
+    @mode = 'shehia'
+    dialogTitle = "Add New Shehia"
+    Dialog.create(@dialogShehia, dialogTitle)
+    $('form#shehia input').val('')
+    return false
 
-class Unit
+  createFacility: (e) =>
+    e.preventDefault
+    @mode = 'facility'
+    dialogTitle = "Add New Facility"
+    Dialog.create(@dialogFacility, dialogTitle)
+    $('form#facility input').val('')
+    return false
 
-  constructor: (data, @levelName) ->
-    @name = data.name.toUpperCase()
-    @parentId = data.parentId
-    @level = data.level
-    @id = data.id
-    @aliases = for alias in (data.aliases or [])
-      alias.name = alias.name.toUpperCase()
-      alias
-    @phoneNumber = data.phoneNumber
+  addAlias: (event) =>
+    targetForAlias = $(event.target).attr("data-name")
+    newAlias = prompt "What is the new alias for #{targetForAlias}?"
+    if targetForAlias? and newAlias?
+      await GeoHierarchy.addAlias(targetForAlias, newAlias)
+      document.location.reload()
 
-  parent: =>
-    return null unless @parentId
-    global.GeoHierarchy.unitsById[@parentId]
+  addGeoLocation: (event) =>
+    @data = {}
+    @data.Region = $("input#Region").val()
+    @data.District = $("input#District").val()
+    @data.Shehia = $("input#Shehia").val()
+    @data.Facility = $("input#Facility").val()
 
-  children: ->
-    _(global.GeoHierarchy.units).filter (unit) => unit.parentId is @id
+    err = undefined
+    if @mode is "district"
+      parent = @data.Region
+      child = @data.District
+      if @data.Region? and @data.District?
+        err = await GeoHierarchy.addDistrict(@data.Region, @data.District)
+    else if @mode is "shehia"
+      parent = @data.District
+      child = @data.Shehia
+      if @data.Shehia? and @data.District?
+        err = await GeoHierarchy.addShehia(@data.District, @data.Shehia) 
+    else if @mode is "facility"
+      parent = @data.Shehia
+      child = @data.Facility
+      if @data.Shehia? and @data.Facility?
+        err = await GeoHierarchy.addFacility(@data.Shehia, @data.Facility)
 
-  ancestors: =>
-    parent = @parent()
-    return [] if parent is null
-    return [parent].concat(parent.ancestors())
-
-  ancestorAtLevel: (levelName) =>
-    levelName = levelMappings[levelName] or levelName
-    _([@].concat(@ancestors())).find (ancestor) -> # include this in the list to check
-      ancestor.levelName is levelName
-
-  descendants: =>
-    children = @children()
-    return [] if children is null
-    return children.concat(_(children).chain().map (child) ->
-      child.descendants()
-    .flatten().compact().value())
-
-  descendantsAtLevel: (levelName) =>
-    allUnitsAtLevel = 
-    _(global.GeoHierarchy.units).chain()
-    .filter (unit) => 
-      unit.levelName is levelName
-    .filter (unit) => 
-      _(unit.ancestors()).contains(@)
-    .value()
-    # This is slower than above which only loops through entire set of units once
-    #_(@descendants()).filter (descendant) -> descendant.levelName is levelName
-
-class GeoHierarchy
-
-  loadAliases: (data) =>
-    aliasesByCurrentName = {}
-    for alias in data
-      aliasesByCurrentName[alias.officialName] or= []
-      aliasesByCurrentName[alias.officialName].push alias.alias
-
-    @externalAliases = _(@externalAliases or= {}).extend aliasesByCurrentName
-
-  loadData: (data) =>
-    @units = []
-    @unitsById = {}
-    @unitsByName = {}
-    @unitsByLevel = {
-      1:[]
-      2:[]
-      3:[]
-      4:[]
-      5:[]
-      6:[]
-    }
-    @unitsByLevelName = {}
-    @levels = for level in data.levels
-      level.name = level.name.toUpperCase()
-      level
-    @levelNamesForNumber = {}
-
-    for level in @levels
-      @levelNamesForNumber[level.number] = level.name
-
-    for unitData in data.units
-      unit = new Unit(unitData, @levelNamesForNumber[unitData.level])
-      @units.push unit
-      @unitsById[unit.id] = unit
-      @unitsByLevel[unit.level].push unit
-      @unitsByLevelName[unit.levelName] or= []
-      @unitsByLevelName[unit.levelName].push unit
-      @unitsByName[unit.name] or= []
-      @unitsByName[unit.name].push unit
-      if unit.aliases
-        for alias in unit.aliases
-          @unitsByName[alias.name] or= []
-          @unitsByName[alias.name].push(unit) unless _(@unitsByName[alias.name]).contains(unit)
-
-      if @externalAliases?[unit.name]
-        for alias in @externalAliases[unit.name]
-          @unitsByName[alias] or= []
-          @unitsByName[alias].push(unit) unless _(@unitsByName[alias]).contains(unit)
-
-    #@fuse = new Fuse(_(@unitsByName).keys(), includeScore: true)
-
-    @groups = data.groups
-
-  loadPolygonBoundaries: =>
-    @boundaries =
-      Villages:
-        labelsDocName: 'VillageCntrPtsWGS84'
-        featureName: "Vil_Mtaa_N"
-      Shehias:
-        labelsDocName: 'ShehiaCntrPtsWGS84'
-        featureName: "Shehia_Nam"
-      Districts:
-        labelsDocName: 'DistrictsCntrPtsWGS84'
-        featureName: "District_N"
-
-    for boundaryName, properties of @boundaries
-      unless Coconut.cachingDatabase
-        Coconut.cachingDatabase = Coconut.database # Useful when on node on the server instead of in the browser
-      await Coconut.cachingDatabase.get "#{boundaryName}Adjusted"
-      .catch (error) =>
-        $("#content").html "
-          <span style='font-size:3em'>Updating #{boundaryName} details, please wait.</span>
-        "
-        new Promise (resolve, reject) =>
-          Coconut.cachingDatabase.replicate.from (Coconut.cloudDB or Coconut.database), #cloudDB if mobile client, database if cloud
-            doc_ids: ["#{boundaryName}Adjusted"]
-          .on "complete", =>
-            resolve(Coconut.cachingDatabase.get "#{boundaryName}Adjusted"
-            .catch (error) => 
-              console.log "Error trying to replicate: #{doc_ids: ["#{boundaryName}Adjusted"]}"
-              console.log error
-            )
-      .then (data) =>
-        @boundaries[boundaryName]["query"] = new GeoJsonLookup(data)
-        #console.info "GeoHierarchy loadPolygonBoundaries complete"
-        Promise.resolve()
-
-  load: =>
-    @loadAliases (await Coconut.database.get("Geographic Hierarchy Aliases")
-      .catch (error) => console.error error
-    ).data
-    @loadData (await Coconut.database.get("Geographic Hierarchy")
-      .catch (error) => console.error error
-    )
-    await @loadPolygonBoundaries()
-
-  addAlias: (officialName, alias) =>
-    aliases = await Coconut.database.get("Geographic Hierarchy Aliases")
-    aliases.data.push
-      officialName: officialName
-      alias: alias
-    await Coconut.database.put(aliases)
-
-  addDistrict: (regionName, districtName) =>
-    gh = await Coconut.database.get("Geographic Hierarchy")
-    
-    region = @findOneRegion(regionName)
-    if !region
-      return "Region does not exist"
-
-    district = @validDistrict(districtName)
-    if district
-      return "District already exists"
-
-    uniqueId = (length=11) ->
-      id = ""
-      id += Math.random().toString(36).substr(2) while id.length < length
-      id.substr 0, length
-    districtId = uniqueId()    # => n5yjla3bd83
-
-    if districtId && region?.id
-      gh.units.push
-        name: districtName
-        parentId: region.id
-        level: 4
-        id: districtId
-      await Coconut.database.put(gh)
-
-  addShehia: (districtName, shehiaName) =>
-    gh = await Coconut.database.get("Geographic Hierarchy")
-    district = @findOneDistrict(districtName)
-    if !district
-      return "District does not exist"
-
-    shehia = @validShehia(shehiaName)
-    if shehia
-      return "Shehia already Exists"
-
-    uniqueId = (length=11) ->
-      id = ""
-      id += Math.random().toString(36).substr(2) while id.length < length
-      id.substr 0, length
-    shehiaId = uniqueId()    # => n5yjla3bd83
-
-    if shehiaId && district?.id
-      gh.units.push
-        name: shehiaName
-        parentId: district.id
-        level: 5
-        id: shehiaId
-      await Coconut.database.put(gh)    
-
-  addFacility: (shehiaName, facilityName) =>
-    gh = await Coconut.database.get("Geographic Hierarchy")
-    shehia = @findOneShehia(shehiaName)
-    if !shehia
-      return "Shehia does not exist"
-
-    facility = @validFacility(facilityName)
-    if facility
-      return "Facility already exists"
-
-    uniqueId = (length=11) ->
-      id = ""
-      id += Math.random().toString(36).substr(2) while id.length < length
-      id.substr 0, length
-    facilityId = uniqueId()    # => n5yjla3bd83
-
-    if facilityId && shehia?.id
-      gh.units.push
-        name: facilityName
-        parentId: shehia.id
-        level: 6
-        id: facilityId
-      await Coconut.database.put(gh)
-
-  # function from legacy version #
-
-  ###
-  Note done:
-  findInNodes
-  update: (region,district,shehias) =>
-  ###
-
-  findAll: (name) =>
-    name = name?.trim().toUpperCase()
-    return [] unless name?
-    @unitsByName[name]
-
-  findAllNameAndLevel: (name) =>
-    for unit in @findAll(name)
-      "#{unit.name}: #{unit.levelName}"
-
-  find: (name, levelName, tryCorrections = true) =>
-    return [] unless levelName?
-    levelName = levelName.trim().toUpperCase()
-    # When Coconut adopted DHIS2 units, we had to map old level names to the DHIS2 ones
-    levelName = levelMappings[levelName] or levelName
-
-    result = _(@findAll(name)).filter (unit) ->
-      unit.levelName is levelName
-
-    if result.length isnt 0 or tryCorrections is false
-      return result
+    if err
+      alert "Failed to add #{child} to #{parent}: #{err}"
     else
-      if name?.match(/\./)
-        return @find(name.replace(/\./g," ", levelName))
+      dialog.close() if dialog.open
+      document.location.reload()
 
-      unless levelName is "HEALTH FACILITIES"
-        return []
-      else
-        # Common health facility suffixes
-        suffixes = [
-          # Most common at top
-          "PHCU"
-          "PHCU+"
-          "DISPENSARY"
-          "CLINIC"
-          "CAMP"
-          "CENTER"
-          "CENTRE"
-          "FOUNDATION"
-          "HOSPITAL"
-        ]
-        for suffix in suffixes
-          name = name.replace(new RegExp(suffix, "i"), "")
-        for suffix in suffixes
-          result = @find("#{name} #{suffix}", levelName, false)
-          return result if result.length > 0
-        return []
-          
+    return false
 
-    ###
-    if result.length > 0
-      return result
-    else
-      _(@fuse.search(name)).chain().map (fuseResult) =>
-        console.log fuseResult
-        @unitsByName[fuseResult.item]
-      .flatten()
-      .filter (unit) ->
-        unit.levelName is levelName
-      .value()
-    ###
+  csv: => @tabulator.download "csv", "CoconutTableExport.csv"
 
-  findFirst: (name, levelName) =>
-    result = @find(name,levelName)
-    if result.length >= 1
-      result[0]
-    else
-      undefined
+  render: =>
+    options = $.extend({},Coconut.router.reportViewOptions)
+    @mode = "facility"
+    @document_id = "Geo Hierarchy"
+    @dialogDistrict = "
+      <form id='district' method='dialog'>
+        <div id='dialog-title'> </div>
+        <div class='mdl-textfield mdl-js-textfield mdl-textfield--floating-label'>
+          <input class='mdl-textfield__input' type='text' id='Region' name='Region'></input>
+          <label class='mdl-textfield__label'>Region</label>
+        </div>
+        <div class='mdl-textfield mdl-js-textfield mdl-textfield--floating-label'>
+          <input class='mdl-textfield__input' type='text' id='District' name='District'></input>
+          <label class='mdl-textfield__label'>District</label>
+        </div>                        
+        <div id='dialogActions'>
+           <button class='mdl-button mdl-js-button mdl-button--primary' id='ghSave' type='submit' value='save'><i class='mdi mdi-content-save mdi-24px'></i> Save</button> &nbsp;
+           <button class='mdl-button mdl-js-button mdl-button--primary' id='ghCancel' type='submit' value='cancel'><i class='mdi mdi-close-circle mdi-24px'></i> Cancel</button>
+        </div>
+      </form>
+    "
+    @dialogShehia = "
+      <form id='shehia' method='dialog'>
+        <div id='dialog-title'> </div>
+        <div class='mdl-textfield mdl-js-textfield mdl-textfield--floating-label'>
+          <input class='mdl-textfield__input' type='text' id='District' name='District'></input>
+          <label class='mdl-textfield__label'>District</label>
+        </div>  
+        <div class='mdl-textfield mdl-js-textfield mdl-textfield--floating-label'>
+          <input class='mdl-textfield__input' type='text' id='Shehia' name='Shehia'></input>
+          <label class='mdl-textfield__label'>Shehia</label>
+        </div>                      
+        <div id='dialogActions'>
+           <button class='mdl-button mdl-js-button mdl-button--primary' id='ghSave' type='submit' value='save'><i class='mdi mdi-content-save mdi-24px'></i> Save</button> &nbsp;
+           <button class='mdl-button mdl-js-button mdl-button--primary' id='ghCancel' type='submit' value='cancel'><i class='mdi mdi-close-circle mdi-24px'></i> Cancel</button>
+        </div>
+      </form>
+    "
+    @dialogFacility = "
+      <form id='facility' method='dialog'>
+        <div id='dialog-title'> </div>
+        <div class='mdl-textfield mdl-js-textfield mdl-textfield--floating-label'>
+          <input class='mdl-textfield__input' type='text' id='Shehia' name='Shehia'></input>
+          <label class='mdl-textfield__label'>Shehia</label>
+        </div>
+        <div class='mdl-textfield mdl-js-textfield mdl-textfield--floating-label'>
+          <input class='mdl-textfield__input' type='text' id='Facility' name='Facility'></input>
+          <label class='mdl-textfield__label'>Facility</label>
+        </div>                        
+        <div id='dialogActions'>
+           <button class='mdl-button mdl-js-button mdl-button--primary' id='ghSave' type='submit' value='save'><i class='mdi mdi-content-save mdi-24px'></i> Save</button> &nbsp;
+           <button class='mdl-button mdl-js-button mdl-button--primary' id='ghCancel' type='submit' value='cancel'><i class='mdi mdi-close-circle mdi-24px'></i> Cancel</button>
+        </div>
+      </form>
+    "
+    @$el.html "
+      <h2>Regions, Districts, Facilities and Shehias</h2>
+      <button class='' id='new-district-btn'>Add District</button>
+      <button class='' id='new-shehia-btn'>Add Shehia</button>
+      <button class='' id='new-facility-btn'>Add Health Facility</button>
+      <dialog id='dialog'>
+        <div id='dialogContent'> </div>
+      </dialog>
+      <br/>
+      <br/>
+      <button id='download'>CSV ↓</button>
+      <div id='tabulator'></div>
+    "
 
-  findOneMatchOrUndefined: (targetName, levelName) =>
-    matches = @find(targetName, levelName)
-    switch matches.length
-      when 0 then return null
-      when 1 then return matches[0]
-      else
-        return undefined
+    @tabulator = new Tabulator "#tabulator",
+      height: 500
+      columns: for field in [
+        "Name"
+        "Level"
+        "One level up"
+        "Two levels up"
+        "Aliases"
+        "Actions"
+      ]
+        result = {
+          title: field
+          field: field
+          headerFilter: "input" unless field is "Actions"
+        }
+        switch field
+          when "Name"
+            result["formatterParams"] = urlField: "url"
+            result["formatter"] = "link"
+          when "Actions"
+            result["formatter"] = (cell, formatterParams, onRendered) ->
+              "<button class='addAlias' data-name='#{cell.getRow().getData().Name}'>Add Alias</button>"
 
-  findHavingAncestor: (name, levelName, ancestorUnit) =>
-    _(@find(name, levelName)).filter (unit) =>
-      _(unit.ancestors()).includes ancestorUnit
+        result
 
-  findWithParent: (name, levelName) =>
-    for unit in @find(name,levelName)
-      name: unit.name
-      parentName: unit.parent().name
+      data: for unit in GeoHierarchy.units
+        {
+          Name: unit.name
+          Level: unit.levelName
+          "One level up": "#{unit.parent()?.levelName or ""}: #{unit.parent()?.name or ""}"
+          "Two levels up": "#{unit.parent()?.parent()?.levelName or ""}: #{unit.parent()?.parent()?.name or ""}"
+          url: "#dashboard/administrativeLevel/#{unit.levelName}/administrativeName/#{unit.name}"
+          "Aliases": if (alias = GeoHierarchy.externalAliases[unit.name]) then alias else ""
+        }
 
-  findAllForLevel: (levelName) =>
-    levelName = levelName.toUpperCase()
-    levelName = levelMappings[levelName] or levelName
-    @unitsByLevelName[levelName]
+  formCancel: (e) =>
+    e.preventDefault
+    console.log("Cancel pressed")
+    dialog.close() if dialog.open
+    return false
 
-  findChildrenNames: (targetLevelName, parentName) =>
-    parentNode = @find(parentName, targetLevelName)
-    console.error "More than one match" if parentNode.length >= 2
-    _(parentNode[0].children()).pluck "name"
-
-  findAllDescendantsAtLevel: (name, sourceLevelName, targetLevelName) =>
-    targetLevelName = targetLevelName.toUpperCase()
-    targetLevelName = levelMappings[targetLevelName] or targetLevelName
-    @findFirst(name, sourceLevelName)?.descendantsAtLevel(targetLevelName)
-
-  findAllAncestorsAtLevel: (name, sourceLevelName, targetLevelName) =>
-    targetLevelName = targetLevelName.toUpperCase()
-    targetLevelName = levelMappings[targetLevelName] or targetLevelName
-    ancestors = @findFirst(name, sourceLevelName)?.ancestors()
-    _(ancestors).filter (ancestor) -> ancestor.levelName is targetLevelName
-
-  availableLevelsAscending: ->
-    levelNames = []
-    levelNumber = 0
-    while levelNumber+=1 < 10 and @levelNamesForNumber[levelNumber]
-      levelNames.push(@levelNamesForNumber[levelNumber])
-    levelNames
-
-  allUnitsInGroup: (name) =>
-    name = name.toUpperCase()
-    group = _(@groups).find (group) => group.name is name
-    console.error "Can't find group #{name}" unless group
-    _(group.unitIds).map (unitId) =>
-      @unitsById[unitId]
-
-
-  getAncestorAtLevel: (sourceName, sourceLevel, targetLevel) =>
-    @findFirst(sourceName, sourceLevel.toUpperCase()).ancestorAtLevel(targetLevel.toUpperCase())?.name
-
-
-  ###
-    Zanzibar Specific Functions - should have generic equivalent above
-  ###
-
-  swahiliDistrictName: (districtName) =>
-    @findFirst(districtName, "DISTRICT")?.name
-
-  districtNameEnglishIfPossible: (districtName) => 
-    districtUnit = @findFirst(districtName, "DISTRICT")
-    _(districtUnit?.aliases).findWhere({description:"English"})?.name or districtUnit?.name
-
-  findShehia: (shehiaName) => @find(shehiaName, "SHEHIA")
-
-  findShehiaWithAncestor: (shehiaName,ancestorName, ancestorLevel) => 
-    shehias = @findShehia(shehiaName)
-    targetAncestors = @find(ancestorName, ancestorLevel) # most likely just 1
-
-    for shehia in shehias
-      for ancestor in shehia.ancestors()
-        if _(targetAncestors).contains ancestor
-          return shehia
-
-  findOneRegion: (regionName) => @findOneMatchOrUndefined(regionName,"REGION")
-
-  findOneDistrict: (districtName) => @findOneMatchOrUndefined(districtName,"DISTRICT")
-
-  findOneShehia: (shehiaName) => @findOneMatchOrUndefined(shehiaName, "SHEHIA")
-
-  valid: (type,name) =>
-    if type.match(/shehia/i)
-      @validShehia(name)
-    else if type.match(/district/i)
-      @validDistrict(name)
-    else if type.match(/facility/i)
-      @validFacility(name)
-
-  validShehia: (shehiaName) =>  @findShehia(shehiaName)?.length > 0
-
-  validDistrict: (districtName) =>  
-    try
-      @find(districtName, "DISTRICT")?.length > 0
-    catch
-      return false
-
-  validFacility: (facilityName) => @find(facilityName,"HEALTH FACILITIES")?.length > 0
-
-  findAllShehiaNamesFor: (name, level) => _(@findAllDescendantsAtLevel(name, level, "SHEHIA")).pluck "name"
-
-  findAllDistrictsFor: (name, level) => _(@findAllDescendantsAtLevel(name, level, "DISTRICT")).pluck "name"
-
-  allZones: => _.pluck @findAllForLevel("ZONE"), "name"
-
-  allRegions: => _.pluck @findAllForLevel("REGION"), "name"
-
-  allDistricts: => _.pluck @findAllForLevel("DISTRICT"), "name"
-
-  allShehias: => _.pluck @findAllForLevel("SHEHIA"), "name"
-
-  allUniqueShehiaNames: => _(@allShehias()).uniq()
-
-  all: (levelName) => _.pluck @findAllForLevel(levelName.toUpperCase()), "name"
-
-
-  getZoneForDistrict: (districtName) =>
-    district = @findOneMatchOrUndefined(districtName,"DISTRICT")
-    return null unless district
-    _(district.ancestors()).find (unit) ->
-      unit.levelName is "ISLANDS" or unit.levelName is "ZONE" # Added ISLANDS for DHIS2 unit merge
-    .name
-
-  getZoneForRegion: (regionName) ->
-    if regionName.match /PEMBA/
-      return "PEMBA"
-    else
-      return "UNGUJA"
-
-  districtsForZone:  (zoneName) =>
-    _(@findAllDescendantsAtLevel(zoneName,"ZONE","DISTRICT")).pluck "name"
-
-  ## Functions from FacilityHierarchy ##
-  # TODO refactor to not use these #
-
-  allFacilities: => _(@findAllForLevel("FACILITY")).chain().pluck("name").unique().value()
-
-  # Warning facilityNames may not be unique
-  getDistrict: (facilityName) =>
-    ancestors = @findAllAncestorsAtLevel(facilityName, "FACILITY", "DISTRICT")
-    if ancestors.length > 0 then ancestors[0].name else null
-
-  # Warning facilityNames may not be unique
-  getZone: (facilityName) =>
-    facility = @findFirst(facilityName, "FACILITY")
-    unless facility
-      console.error "Can't find facility: #{facilityName}"
-      return null
-    zoneForFacility = facility.ancestorAtLevel("ZONE")
-    unless zoneForFacility
-      console.error "No zone found for facility: #{facilityName}"
-      return null
-    zoneForFacility.name
-
-  facilities: (districtName) => # Note this is note named well
-    _(@findAllDescendantsAtLevel(districtName, "DISTRICT", "FACILITY")).pluck "name"
-
-  facilitiesForDistrict: (districtName) => @facilities(districtName)
-
-  facilitiesForZone: (zoneName) => @findAllDescendantsAtLevel(zoneName, "ZONE", "FACILITY")
-
-  numbers: (districtName,facilityName) =>
-    _(@find(facilityName, "FACILITY")).find (facility) ->
-      facility.ancestorAtLevel("DISTRICT").name is districtName
-    .phoneNumber
-
-  facilityTypeForFacilityUnit: (facilityUnit) =>
-    return null unless facilityUnit?
-    facilityId = facilityUnit.id
-
-    privateUnitIds = _(@groups).find((group) => group.name is "PRIVATE").unitIds
-    if _(privateUnitIds).contains(facilityId)
-      "PRIVATE"
-    else
-      "PUBLIC"
-
-  facilityType: (facilityName) =>
-
-    facilities = @find(facilityName, "FACILITY")
-    if facilities.length isnt 1
-      if facilities.length is 0
-        console.warn "Unknown facility name: #{facilityName}. Returning UNKNOWN"
-        "UNKNOWN"
-      else
-        console.warn "Non-unique facility name: #{facilityName}. Returning PUBLIC by default"
-        "PUBLIC"
-    else
-      @facilityTypeForFacilityUnit(facilities[0])
-
-  allPrivateFacilities: =>
-    group = _(@groups).find (group) => group.name is "PRIVATE"
-    console.error "Can't find group #{name}" unless group
-    _(group.unitIds).map (unitId) =>
-      @unitsById[unitId].name
-
-  boundaryPropertiesFromGPS: (longitude, latitude) =>
-    throw "Longitude or latitude missing for locationFromGPS" unless longitude? and latitude?
-
-    properties = {}
-
-    for boundaryName of @boundaries
-      for feature in @boundaries[boundaryName].query.getContainers(
-        type: "Point"
-        coordinates: [longitude, latitude]
-      ).features
-        for property, value of feature.properties
-          if properties[property] and property[property] is value
-            console.log "Confliciting property: #{property}: #{properties[property]} and #{value}"
-          else
-            properties[property] = value
-            
-    properties
-
-  villagePropertyFromGPS: (longitude, latitude) => #Note that we don't have villages as units in the hierarchy yet
-    @boundaryPropertiesFromGPS(longitude, latitude)?["Vil_Mtaa_N"]
-
-  mostPreciseUnitFromGPS: (longitude, latitude) =>
-    locationProperty = {
-      "VILLAGE": "Vil_Mtaa_N"
-      "WARD": "Ward_Name"
-      "SHEHIA": "Shehia_Nam"
-      "DISTRICT": "District_N"
-      "REGION": "Region_Nam"
-    }
-
-    # Use the district or region if need be eliminate more precise place names that are not unique
-    properties = @boundaryPropertiesFromGPS(longitude, latitude)
-    #Shehia names are unique by district, so first try and get the district
-    unless properties[locationProperty.DISTRICT]?
-      console.log "No district for #{longitude} #{latitude}, here are the properties: #{JSON.stringify(properties)}"
-      return null
-    ancestor = if properties[locationProperty.DISTRICT] is "Magharibi"
-      @findFirst("MJINI MAGHARIBI", "REGION")
-    else
-      @findFirst(properties[locationProperty.DISTRICT], "DISTRICT")
-
-    console.log "Can't find district for #{properties[locationProperty.DISTRICT]}" unless ancestor?
-
-    for locationType, locationTypeProperty of locationProperty
-      unit = @findHavingAncestor(properties[locationTypeProperty], locationType, ancestor)
-      if unit.length is 1
-        return unit[0]
-      if unit.length > 1
-        console.error "Multiple units for GPS location with ancestor: #{ancestor.name}\n #{JSON.stringify unit}"
-
-  findByGPS: (longitude, latitude, levelName) =>
-    unit = @mostPreciseUnitFromGPS(longitude,latitude)
-    if unit?.levelName is levelName
-      unit
-    else
-      unit?.ancestorAtLevel(levelName)
-
-module.exports = GeoHierarchy
+module.exports = GeoHierarchyView
