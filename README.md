@@ -47,13 +47,13 @@ Server installation instructions
 
     cp config.defaults.json config.json
 
-2. Edit nginx config (Requires [nginx](https://www.nginx.com/)):
+3. Edit nginx config (Requires [nginx](https://www.nginx.com/)):
 
     location /analytics {
-      alias /var/www/analytics/_attachments;
+        alias /var/www/analytics/_attachments;
     }
 
-3. (Optional) Add crontab to pull automatically
+4. (Optional) Add crontab to pull automatically
 
     15 * * * * cd /var/www/analytics-dev; export GIT_SSH_COMMAND='ssh -i /root/.ssh/coconut_cloud_rsa'; git reset --hard origin/master; git pull origin master
     
