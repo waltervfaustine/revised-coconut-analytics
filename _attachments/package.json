@@ -7,9 +7,9 @@
     "livereload": "./node_modules/livereloadify/cli.js ./",
     "static": "./node_modules/node-static/bin/cli.js --port 8082 ./",
     "install-server": "npm install --no-optional --unsafe-perm",
-    "postinstall": "npm run venderify && npm run bundlify",
-    "venderify": "npx browserify -v -t coffeeify --extension='.coffee' app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables| npx terser > bundle.js",
-    "bundlify": "npx browserify -r moment -r jquery -r backbone -r pouchdb-core -r pouchdb-adapter-http -r pouchdb-mapreduce -r pouchdb-upsert -r underscore -r tabulator-tables | npx terser > vendor.min.js"
+    "postinstall": "npm run vendorify && npm run bundlify",
+    "bundlify": "npx browserify -v -t coffeeify --extension='.coffee' app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables > bundle.js",
+    "vendorify": "npx browserify -r moment -r jquery -r backbone -r pouchdb-core -r pouchdb-adapter-http -r pouchdb-mapreduce -r pouchdb-upsert -r underscore -r tabulator-tables > vendor.min.js"
   },
   "dependencies": {
     "backbone": "^1.2.1",
