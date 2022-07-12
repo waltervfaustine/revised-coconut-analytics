@@ -21,7 +21,7 @@ class Specimen
         @Shehia ?= resultDoc?["shehia"]
         @shehia ?= resultDoc?["shehia"]
         @methodOfCollection ?= resultDoc?["method-of-collection"]
-        @morphologicalIdentification ?= (resultDoc["morphological-identification-of-mosquito"]).replace('\n','')
+        @morphologicalIdentification ?= (resultDoc["morphological-identification-of-mosquito"])?.replace('\n','')
      
   facility: ->
     @facilityUnit()?.name or "UNKNOWN"
