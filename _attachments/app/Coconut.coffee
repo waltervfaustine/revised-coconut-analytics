@@ -31,6 +31,7 @@ class Coconut
     @database = new PouchDB("#{@databaseURL}/#{@databaseName}", databaseOptions)
     @reportingDatabase = new PouchDB("#{@databaseURL}/zanzibar-reporting", databaseOptions)
     @cachingDatabase = new PouchDB("coconut-zanzibar-caching")
+    @zanzibarGeoPluginDatabase = new PouchDB("#{@databaseURL}/plugin-zanzibar-geography")
     @weeklyFacilityDatabase = new PouchDB("#{@databaseURL}/zanzibar-weekly-facility")
     @individualIndexDatabase = new PouchDB("#{@databaseURL}/zanzibar-index-individual")
     @entomologyDatabase = new PouchDB("#{@databaseURL}/entomology_surveillance")

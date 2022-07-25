@@ -401,7 +401,7 @@ class Reports
               
 
           _.each cases, (specimen) ->
-            caseLocation = specimen.locationBy(options.aggregationLevel) || "UNKNOWN"
+            caseLocation = specimen.locationBy(options.aggregationLevel).trim() || "UNKNOWN"
             data.identificationAndAbundance["ALL"].total.push specimen
             data.identificationAndAbundance[caseLocation].total.push specimen
             if(specimen.morphologicalIdentification is "An gambiae complex")

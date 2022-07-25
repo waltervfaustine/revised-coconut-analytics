@@ -167,15 +167,13 @@ class GeoHierarchy
     await Coconut.database.put(aliases)
 
   addDistrict: (regionName, districtName) =>
-    gh = await Coconut.database.get("Geographic Hierarchy")
-    
     region = @findOneRegion(regionName)
     if !region
-      return "Region does not exist"
+      throw "Region does not exist"
 
     district = @validDistrict(districtName)
     if district
-      return "District already exists"
+      throw "District already exists"
 
     uniqueId = (length=11) ->
       id = ""
@@ -183,23 +181,33 @@ class GeoHierarchy
       id.substr 0, length
     districtId = uniqueId()    # => n5yjla3bd83
 
+    gh = await Coconut.database.get("Geographic Hierarchy")
+    pgh = await Coconut.zanzibarGeoPluginDatabase.get("Geographic Hierarchy")
+
     if districtId && region?.id
       gh.units.push
         name: districtName
         parentId: region.id
         level: 4
         id: districtId
+
+      pgh.units.push
+        name: districtName
+        parentId: region.id
+        level: 4
+        id: districtId
+
       await Coconut.database.put(gh)
+      await Coconut.zanzibarGeoPluginDatabase.put(pgh)
 
   addShehia: (districtName, shehiaName) =>
-    gh = await Coconut.database.get("Geographic Hierarchy")
     district = @findOneDistrict(districtName)
     if !district
-      return "District does not exist"
+      throw "District does not exist"
 
     shehia = @validShehia(shehiaName)
     if shehia
-      return "Shehia already Exists"
+      throw "Shehia already Exists"
 
     uniqueId = (length=11) ->
       id = ""
@@ -207,23 +215,33 @@ class GeoHierarchy
       id.substr 0, length
     shehiaId = uniqueId()    # => n5yjla3bd83
 
+    gh = await Coconut.database.get("Geographic Hierarchy")
+    pgh = await Coconut.zanzibarGeoPluginDatabase.get("Geographic Hierarchy")
+
     if shehiaId && district?.id
       gh.units.push
         name: shehiaName
         parentId: district.id
         level: 5
         id: shehiaId
-      await Coconut.database.put(gh)    
+
+      pgh.units.push
+        name: shehiaName
+        parentId: district.id
+        level: 5
+        id: shehiaId
+
+      await Coconut.database.put(gh)
+      await Coconut.zanzibarGeoPluginDatabase.put(pgh)
 
   addFacility: (shehiaName, facilityName) =>
-    gh = await Coconut.database.get("Geographic Hierarchy")
     shehia = @findOneShehia(shehiaName)
     if !shehia
-      return "Shehia does not exist"
+      throw "Shehia does not exist"
 
     facility = @validFacility(facilityName)
     if facility
-      return "Facility already exists"
+      throw "Facility already exists"
 
     uniqueId = (length=11) ->
       id = ""
@@ -231,13 +249,24 @@ class GeoHierarchy
       id.substr 0, length
     facilityId = uniqueId()    # => n5yjla3bd83
 
+    gh = await Coconut.database.get("Geographic Hierarchy")
+    pgh = await Coconut.zanzibarGeoPluginDatabase.get("Geographic Hierarchy")
+
     if facilityId && shehia?.id
       gh.units.push
         name: facilityName
         parentId: shehia.id
         level: 6
         id: facilityId
+
+      pgh.units.push
+        name: facilityName
+        parentId: shehia.id
+        level: 6
+        id: facilityId
+
       await Coconut.database.put(gh)
+      await Coconut.zanzibarGeoPluginDatabase.put(pgh)
 
   # function from legacy version #
 

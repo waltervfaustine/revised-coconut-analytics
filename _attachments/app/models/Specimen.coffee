@@ -16,10 +16,10 @@ class Specimen
     _.each resultDocs, (resultDoc) => 
       if(resultDoc)
         @specimenID ?= resultDoc?["id"]
-        @District ?= resultDoc?["district"]
-        @district ?= resultDoc?["district"]
-        @Shehia ?= resultDoc?["shehia"]
-        @shehia ?= resultDoc?["shehia"]
+        @District ?= resultDoc?["district"].trim()
+        @district ?= resultDoc?["district"].trim()
+        @Shehia ?= resultDoc?["shehia"].trim()
+        @shehia ?= resultDoc?["shehia"].trim()
         @methodOfCollection ?= resultDoc?["method-of-collection"]
         @morphologicalIdentification ?= (resultDoc["morphological-identification-of-mosquito"])?.replace('\n','')
      
