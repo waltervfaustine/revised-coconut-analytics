@@ -63,28 +63,26 @@ class GeoHierarchyView extends Backbone.View
     @data.Shehia = $("input#Shehia").val()
     @data.Facility = $("input#Facility").val()
 
-    err = undefined
-    if @mode is "district"
-      parent = @data.Region
-      child = @data.District
-      if @data.Region? and @data.District?
-        err = await GeoHierarchy.addDistrict(@data.Region, @data.District)
-    else if @mode is "shehia"
-      parent = @data.District
-      child = @data.Shehia
-      if @data.Shehia? and @data.District?
-        err = await GeoHierarchy.addShehia(@data.District, @data.Shehia) 
-    else if @mode is "facility"
-      parent = @data.Shehia
-      child = @data.Facility
-      if @data.Shehia? and @data.Facility?
-        err = await GeoHierarchy.addFacility(@data.Shehia, @data.Facility)
-
-    if err
-      alert "Failed to add #{child} to #{parent}: #{err}"
-    else
+    try
+      if @mode is "district"
+        parent = @data.Region
+        child = @data.District
+        if @data.Region? and @data.District?
+          await GeoHierarchy.addDistrict(@data.Region, @data.District)
+      else if @mode is "shehia"
+        parent = @data.District
+        child = @data.Shehia
+        if @data.Shehia? and @data.District?
+          await GeoHierarchy.addShehia(@data.District, @data.Shehia)
+      else if @mode is "facility"
+        parent = @data.Shehia
+        child = @data.Facility
+        if @data.Shehia? and @data.Facility?
+          await GeoHierarchy.addFacility(@data.Shehia, @data.Facility)
       dialog.close() if dialog.open
       document.location.reload()
+    catch err
+      alert "Failed to add #{child} to #{parent}: #{err}"
 
     return false
 
