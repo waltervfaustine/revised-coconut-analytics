@@ -11,7 +11,7 @@ COPY package*.json ./
 # COPY config*.json ./
 
 # Copy minified vendor JavaScript files to the container
-COPY vendor*.min.js ./
+# COPY vendor*.min.js ./
 
 # Install dependencies and cleanup in a single layer
 RUN npm install && \
