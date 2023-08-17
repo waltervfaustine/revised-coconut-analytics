@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Copy the configuration file (config.json) to the container
-COPY ../config.json ./
+# COPY config*.json ./
 
 # Copy minified vendor JavaScript files to the container
 COPY vendor*.min.js ./
