@@ -15,11 +15,11 @@ RUN npm install && \
 # Run the custom command 'npm run install-server'
 RUN npm run install-server
 
+# Copy the rest of the source code to the container
+COPY . .
+
 # Install bundlify package for bundling
 RUN npm install bundlify
 
 # Install vendorify package for vendor management
 RUN npm install vendorify
-
-# Copy the rest of the source code to the container
-COPY . .
