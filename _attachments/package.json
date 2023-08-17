@@ -3,12 +3,12 @@
   "version": "0.9.0",
   "scripts": {
     "start": "npm run watch & npm run livereload & npm run static",
-    "watch": "./node_modules/watchify/bin/cmd.js -v -t coffeeify --debug --extension='.coffee' app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables  -o bundle.js",
+    "watch": "./node_modules/watchify/bin/cmd.js -v -t coffeeify --debug --extension='.coffee' ./app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables  -o bundle.js",
     "livereload": "./node_modules/livereloadify/cli.js ./",
     "static": "./node_modules/node-static/bin/cli.js --port 8082 ./",
     "install-server": "npm install --no-optional --unsafe-perm",
     "postinstall": "pwd && npm run vendorify && npm run bundlify",
-    "bundlify": "npx browserify -v -t coffeeify --extension='.coffee' app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables > bundle.js",
+    "bundlify": "npx browserify -v -t coffeeify --extension='.coffee' ./app/start.coffee -x moment -x jquery -x backbone -x pouchdb-core -x pouchdb-adapter-http -x pouchdb-mapreduce -x pouchdb-upsert -x underscore -x tabulator-tables > bundle.js",
     "vendorify": "npx browserify -r moment -r jquery -r backbone -r pouchdb-core -r pouchdb-adapter-http -r pouchdb-mapreduce -r pouchdb-upsert -r underscore -r tabulator-tables > vendor.min.js"
   },
   "dependencies": {
