@@ -30,6 +30,8 @@ class Coconut
     @databaseName = AppConfig.targetDatabase or prompt("Database Name:")
     @database = new PouchDB("#{@databaseURL}/#{@databaseName}", databaseOptions)
     @reportingDatabase = new PouchDB("#{@databaseURL}/zanzibar-reporting", databaseOptions)
+    @shokishokiDatabase = new PouchDB("#{@databaseURL}/shokishoki", databaseOptions)
+    @notificationDatabase = new PouchDB("#{@databaseURL}/notifications-zanzibar", databaseOptions)
     @cachingDatabase = new PouchDB("coconut-zanzibar-caching")
     @zanzibarGeoPluginDatabase = new PouchDB("#{@databaseURL}/plugin-zanzibar-geography")
     @weeklyFacilityDatabase = new PouchDB("#{@databaseURL}/zanzibar-weekly-facility")

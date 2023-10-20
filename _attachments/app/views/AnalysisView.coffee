@@ -103,7 +103,7 @@ class AnalysisView extends Backbone.View
           "Fully Investigated"
           "%"
           "Complete facility visit"
-          "Without complete facility visit (but with case notification)"
+          "Without complete record(but with case nofification)"
           "%"
           "Without complete facility visit within 24 hours"
           "%"
@@ -115,15 +115,17 @@ class AnalysisView extends Backbone.View
 
         caseFollowUpHeadings = [
           options.aggregationLevel
+          "Cases Notified (Improved)"
           "Cases Notified"
-          "Missing sent Case Notification"
-          "Missing received Case Notification"
-          "Multiple notified"
-          "False positive"
-          "Cases for investigation"
-          "Cases Lost to follow-up"
-          "Cases for full investigation"
-          "Household with more than one case"
+          "Case Notified Within 24hrs"
+          "Accepted Cases"
+          "Pending Accepted Nofification"
+          "Multiple Notified"
+          "False Positive"
+          "Cases for Investigation"
+          "Cases Lost to Follow-up"
+          "Cases for Full Investigation"
+          "Household with More Than One Case"
         ]
 
         individualClassificationHeadings = [
@@ -144,10 +146,14 @@ class AnalysisView extends Backbone.View
         $("#analysis").append @createTable caseFollowUpHeadings, "
           #{
             _.map(data.followups, (values,location) =>
+              # console.log "CAINAMIST::: ", JSON.stringify(values)
+              # console.log "CAINAMIST::: ", JSON.stringify(location)
               "
                 <tr>
                   <td class='mdl-data-table__cell--non-numeric'>#{location}</td>
+                  # <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.allShoki)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.allCases)}</td>
+                  <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.caseNotifiedWith24HRS)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.missingUssdNotification)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.missingCaseNotification)}</td>
                   <td class='mdl-data-table__cell--non-numeric'>#{HTMLHelpers.createDisaggregatableCaseGroup(values.multipleNotified)}</td>

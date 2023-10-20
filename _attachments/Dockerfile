@@ -7,12 +7,6 @@ WORKDIR /app
 # Copy package.json and package-lock.json to the container
 COPY package*.json ./
 
-# Copy the configuration file (config.json) to the container
-# COPY config.json ./
-
-# Copy minified vendor JavaScript files to the container
-# COPY vendor.min.js ./
-
 # Install dependencies and cleanup in a single layer
 RUN npm install && \
     npm cache clean --force && \
@@ -21,14 +15,11 @@ RUN npm install && \
 # Run the custom command 'npm run install-server'
 RUN npm run install-server
 
-# Copy the rest of the source code to the container
-COPY . .
-
 # Install bundlify package for bundling
-RUN npm install bundlify
+RUN npm run bundlify
 
 # Install vendorify package for vendor management
-RUN npm install vendorify
+RUN npm run vendorify
 
-
-
+# Copy the rest of the source code to the container
+COPY . .
