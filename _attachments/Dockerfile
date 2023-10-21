@@ -23,3 +23,9 @@ RUN npm run vendorify
 
 # Copy the rest of the source code to the container
 COPY . .
+
+# Expose the port on which the application will run
+EXPOSE 8082
+
+# Command to run the application
+# CMD ["npm", "run", "start"]

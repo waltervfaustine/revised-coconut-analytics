@@ -3,7 +3,7 @@ version: "3"
 
 # Define the services that make up your application
 services:
-    # Define the udsm-analytics service
+    # Define the udsm-coconut-analytics service
     udsm-coconut-analytics:
         # Build the service from the Dockerfile in the current directory
         build:
@@ -13,13 +13,16 @@ services:
         # Specify your custom container name here
         container_name: udsm-coconut-analytics
 
-        # Map external port 8089 to internal port 8082
+        # Map external port 8095 to internal port 8082
         ports:
-            - "8089:8082"
+            - "8095:8082"
 
         # Set environment variable for the Node.js application
         environment:
             - NODE_ENV=production
+
+        # Set the working directory inside the container
+        working_dir: /app
 
         # Specify the command to run when the container starts
         command: npm run start
