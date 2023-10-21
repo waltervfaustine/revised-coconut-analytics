@@ -16,10 +16,10 @@ RUN npm install && \
 RUN npm run install-server
 
 # Install bundlify package for bundling
-RUN npm run bundlify
+# RUN npm run bundlify
 
 # Install vendorify package for vendor management
-RUN npm run vendorify
+# RUN npm run vendorify
 
 # Copy the rest of the source code to the container
 COPY . .
