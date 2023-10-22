@@ -22,7 +22,7 @@ services:
             - NODE_ENV=production
 
         # Set the working directory inside the container
-        working_dir: /app
+        working_dir: /platform
 
         # Specify the command to run when the container starts
         command: npm run start
