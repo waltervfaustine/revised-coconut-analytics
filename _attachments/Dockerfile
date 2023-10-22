@@ -25,7 +25,7 @@ RUN npm run install-server
 # RUN npm run vendorify
 
 # Copy the rest of the source code to the container
-COPY . .
+COPY . /platform
 
 # Expose the port on which the application will run
 EXPOSE 8082
