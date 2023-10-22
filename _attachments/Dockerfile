@@ -7,8 +7,7 @@ WORKDIR /platform
 # Copy package.json and package-lock.json to the container
 # COPY package*.json ./
 
-COPY package.json /platform/package.json
-COPY package-lock.json /platform/package-lock.json
+COPY package*.json /platform/package.json
 
 
 # Install dependencies and cleanup in a single layer
