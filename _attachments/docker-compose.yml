@@ -13,9 +13,9 @@ services:
         # Specify your custom container name here
         container_name: udsm-coconut-analytics
 
-        # Map external port 8095 to internal port 8082
+        # Map external port 8095 to internal port 8095
         ports:
-            - "8095:8082"
+            - "8095:8095"
 
         # Set environment variable for the Node.js application
         environment:
