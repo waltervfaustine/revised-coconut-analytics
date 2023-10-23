@@ -2,12 +2,12 @@
 FROM node:14-alpine
 
 # Set the working directory inside the container
-WORKDIR /platform/
+WORKDIR /platform
 
 # Copy package.json and package-lock.json to the container
 # COPY package*.json ./
 
-COPY package*.json /platform/package.json
+COPY package*.json /platform
 
 
 # Install dependencies and cleanup in a single layer
@@ -25,7 +25,7 @@ RUN npm run install-server
 # RUN npm run vendorify
 
 # Copy the rest of the source code to the container
-COPY . ./platform/
+COPY . ./platform
 
 # Expose the port on which the application will run
 EXPOSE 8095
