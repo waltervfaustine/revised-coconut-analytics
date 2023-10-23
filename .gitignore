@@ -9,6 +9,6 @@ __views/urlWithCredentials.txt
 npm-debug.log
 .couchapprc
 **/node_modules
-**package-lock.json
+# **package-lock.json
 *.log
 
