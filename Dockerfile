@@ -1,5 +1,5 @@
 # Use an official Node.js runtime as a parent image
-FROM node:14
+FROM node:14-alpine
 
 # Set the working directory in the container
 WORKDIR /app
@@ -8,7 +8,11 @@ WORKDIR /app
 COPY _attachments/package.json ./
 
 # Install project dependencies
-RUN npm install --no-optional --unsafe-perm
+# RUN npm install --no-optional --unsafe-perm
+
+RUN npm install && \
+    npm cache clean --force && \
+    rm -rf /tmp/*
 
 # Copy the rest of the application code to the container
 COPY . .

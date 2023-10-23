@@ -15,7 +15,7 @@ services:
 
         # Map external port 8095 to internal port 8095
         ports:
-            - "8095:8095"
+            - "8095:8082"
 
         # Set environment variable for the Node.js application
         environment:
