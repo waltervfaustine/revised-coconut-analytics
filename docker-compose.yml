@@ -18,11 +18,11 @@ services:
             - "8095:8095"
 
         # Set environment variable for the Node.js application
-        environment:
-            - NODE_ENV=production
+        # environment:
+        #     - NODE_ENV=production
 
         # Set the working directory inside the container
-        working_dir: /platform
+        # working_dir: /platform
 
         # Specify the command to run when the container starts
         command: npm run start
