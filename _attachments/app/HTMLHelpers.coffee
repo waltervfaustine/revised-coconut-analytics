@@ -114,6 +114,8 @@ class HTMLHelpers
       if typeof specimen == 'object' then (specimen.specimenID) else specimen
 
   @createDisaggregatableCaseGroup = (cases, text) ->
+    # console.log "HAPANA 1::: ", JSON.stringify(cases)
+    # console.log "HAPANA 2::: ", JSON.stringify(text)
     text = cases.length unless text?
     "
       <button class='mdl-button mdl-js-button mdl-button--raised sort-value same-cell-disaggregatable' onClick='console.log(this);disaggregateSet(this)'>#{text}</button>

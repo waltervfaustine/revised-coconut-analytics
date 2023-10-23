@@ -1,0 +1,46 @@
+# Specify the version of the Docker Compose format
+version: "3"
+
+# Define the services that make up your application
+services:
+    # Define the udsm-coconut-analytics service
+    udsm-coconut-analytics:
+        # Build the service from the Dockerfile in the current directory
+        build:
+            context: . # Use the current directory as the build context
+            dockerfile: Dockerfile # Specify the Dockerfile to use
+
+        # Specify your custom container name here
+        container_name: udsm-coconut-analytics
+
+        # Map external port 8095 to internal port 8095
+        ports:
+            - "8095:8095"
+
+        # Set environment variable for the Node.js application
+        # environment:
+        #     - NODE_ENV=production
+
+        # Set the working directory inside the container
+        # working_dir: /platform
+
+        # Specify the command to run when the container starts
+        command: npm run start
+        # You can also use a more complex command if needed:
+        # command: sh -c "npm run bundlify && npm run vendorify && npm run start"
+
+        # Enable automatic restarts for the service
+        restart: always
+
+        # Define a health check for the service
+        healthcheck:
+            test: [ "CMD-SHELL", "ps aux | grep '[n]ode'" ]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+
+# Define networks
+networks:
+    default:
+        external:
+            name: dhis-network

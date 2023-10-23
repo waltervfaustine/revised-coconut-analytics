@@ -47,9 +47,8 @@ class Reports
           if (cluster[100].length) > 4
             console.log "#{cluster[100].length} cases within 100 meters of one another"
 
-
   @getCases = (options) =>
-    Coconut.reportingDatabase.query "caseIDsByDate",
+    Coconut.reportingDatabase.query "allCasesAcceptedByDMSO",
       # Note that these seem reversed due to descending order
       startkey: moment(options.endDate).endOf("day").format(Coconut.config.dateFormat)
       endkey: options.startDate
@@ -59,12 +58,17 @@ class Reports
     .then (result) ->
       caseIDs = _.unique(_.pluck result.rows, "value")
 
-      Coconut.database.query "cases",
+      console.log "JSON::: ", JSON.stringify(caseIDs)
+
+      Coconut.database.query "getAcceptedCasesByParams",
         keys: caseIDs
         include_docs: true
       .catch (error) -> console.error error
-      .then (result) =>
-        groupedResults = _.chain(result.rows)
+      .then (result) =>    
+        reportsInstance = new Reports()
+        filteredResults = reportsInstance.filterDocumentsByKeys(caseIDs, result.rows, 'key')
+
+        groupedResults = _.chain(filteredResults)
           .groupBy (row) =>
             row.key
           .map (resultsByCaseID) =>
@@ -108,6 +112,98 @@ class Reports
   getCases: (options) =>
     Reports.getCases(options)
 
+  ###
+  Filter documents based on a list of keys.
+
+  @param {Array} keys - The list of keys to filter documents by.
+  @param {Array} allDocuments - An array containing all the documents from the database.
+  @param {String} prop - The property name in the documents to compare with the keys.
+  @return {Array} - An array containing filtered documents whose specified property values match the provided keys.
+  ###
+  filterDocumentsByKeys: (keys, allDocuments, prop) ->
+      # Filter documents based on keys using the filter function
+      filteredDocs = allDocuments.filter((doc) -> keys.includes(doc[prop].trim()))
+      filteredDocs
+
+  ###
+  This method fetches notified cases from the shokishoki database based on the specified options.
+
+  @param {Object} options - The query options containing start and end dates.
+  @return {Promise} - A Promise that resolves with the query result or rejects with an error.
+  ###
+  getShokishokiCases: (options) ->
+      console.log "Fetching notified cases from the shokishoki database..."
+      
+      # Perform a query on the shokishoki database
+      queryPromise = Coconut.shokishokiDatabase.query "notifiedCasesAtFacilityLevel",
+          startkey: moment(options.endDate).endOf("day").format(Coconut.config.dateFormat)
+          endkey: options.startDate
+          descending: true
+          include_docs: true
+
+      # Handle successful query result
+      queryPromise = queryPromise.then (result) =>
+          console.log "Notified cases fetched successfully."
+          Promise.resolve(result)
+
+      # Handle query errors
+      queryPromise = queryPromise.catch (error) =>
+          console.error "Error fetching notified cases:", error
+          Promise.reject(error)
+
+      # Return the Promise
+      queryPromise
+
+
+  ###
+  This method fetches notified cases within 24 hours from the notification zanzibar database based on the specified options.
+
+  @param {Object} options - The query options containing start and end dates.
+  @return {Promise} - A Promise that resolves with the query result or rejects with an error.
+  @throws {Error} - If there is an error fetching the notified cases.
+  ###
+  getCasesNotifiedWith24Hrs: (options) ->
+      context = "Fetching notified cases within 24 hours from the notification zanzibar database..."
+      console.log context
+      
+      # Perform a query on the notification zanzibar database
+      queryPromise = Coconut.notificationDatabase.query "casesNotifiedWith24HRS",
+          startkey: moment(options.endDate).endOf("day").format(Coconut.config.dateFormat)
+          endkey: options.startDate
+          descending: true
+          include_docs: true
+
+      # Handle successful query result
+      queryPromise = queryPromise.then (result) =>
+          console.log "Notified cases fetched successfully."
+          Promise.resolve(result)
+
+      # Handle query errors
+      queryPromise = queryPromise.catch (error) =>
+          console.error "Error fetching notified cases:", error
+          throw new Error("Error fetching notified cases: #{error}")
+
+      # Return the Promise
+      queryPromise
+
+
+
+  ###
+  This function extracts the "facility-district" property from the provided payload.
+
+  @param {Object} payload - The payload object from which the "facility-district" property will be extracted.
+  @return {string|null} - The extracted "facility-district" property or null if not found.
+  ###
+  extractFacilityDistrict = (payload) ->
+      # Check if the payload and doc property exist and if "facility-district" property is present
+      if payload?.doc? && payload.doc["facility-district"]?
+          # Return the extracted "facility-district" property
+          return payload.doc["facility-district"]
+      else
+          # Return null if "facility-district" property is not found
+          return 'UNKNOWN'
+
+
   @casesAggregatedForAnalysis = (options) =>
     new Promise (resolve, reject) =>
 
@@ -118,243 +214,329 @@ class Reports
       # Hack required because we have multiple success callbacks
       options.finished = options.success
 
-      # Refactor to use reporting database - will be faster and centralize calculations like is the case complete?
+      # Instantiate your class
+      reportsInstance = new Reports()
 
-      Reports.getCases _.extend options,
-        success: (cases) =>
-          IRSThresholdInMonths = 6
+      # Call the method with the appropriate options
+      reportsInstance.getShokishokiCases(options)
+        .then (result) =>
+          if result?.rows?.length > 0
+            # START NOW 
+            Reports.getCases _.extend options,
+              success: (cases) =>
+                IRSThresholdInMonths = 6
 
-          data.followups = {}
-          data.passiveCases = {}
-          data.ages = {}
-          data.gender = {}
-          data.netsAndIRS = {}
-          data.travel = {}
-          data.individualClassification = {}
-          data.totalPositiveCases = {}
+                data.followups = {}
+                data.passiveCases = {}
+                data.ages = {}
+                data.gender = {}
+                data.netsAndIRS = {}
+                data.travel = {}
+                data.individualClassification = {}
+                data.totalPositiveCases = {}
 
-          # Setup hashes for each table
-          aggregationNames = GeoHierarchy.all options.aggregationLevel
-          aggregationNames.push("UNKNOWN")
-          aggregationNames.push("ALL")
-          _.each aggregationNames, (aggregationName) ->
-            data.followups[aggregationName] =
-              allCases: []
-              casesWithCompleteFacilityVisit: []
-              casesInvestigatedDueToAnotherCaseInvestigation: []
-              casesWithoutCompleteFacilityVisit: []
-              casesWithCompleteHouseholdVisit: []
-              casesWithoutCompleteHouseholdVisit: []
-              missingUssdNotification: []
-              missingCaseNotification: []
-              noFacilityFollowupWithin24Hours: []
-              noHouseholdFollowupWithin48Hours: []
-              multipleNotified: []
-              falsePositive: []
-              casesForInvestigation: []
-              casesForFullInvestigation: []
-              lostToFollowUp: []
-              houseWithMoreThanOnePositiveCase: []
-            data.passiveCases[aggregationName] =
-              indexCases: []
-              indexCaseHouseholdMembers: []
-              positiveIndividualsAtIndexHousehold: []
-              neighborHouseholds: []
-              neighborHouseholdMembers: []
-              positiveIndividualsAtNeighborHouseholds: []
-            data.ages[aggregationName] =
-              underFive: []
-              fiveToFifteen: []
-              fifteenToTwentyFive: []
-              overTwentyFive: []
-              unknown: []
-            data.gender[aggregationName] =
-              male: []
-              female: []
-              unknown: []
-            data.netsAndIRS[aggregationName] =
-              sleptUnderNet: []
-              recentIRS: []
-            data.travel[aggregationName] =
-              "No":[]
-              "Yes":[] # This needs to be here for old cases
-              "Yes within Zanzibar":[]
-              "Yes outside Zanzibar":[]
-              "Yes within and outside Zanzibar":[]
-              "Any travel":[]
-              "Not Applicable":[]
-            data.totalPositiveCases[aggregationName] = []
+                # Setup hashes for each table
+                aggregationNames = GeoHierarchy.all options.aggregationLevel
+                aggregationNames.push("UNKNOWN")
+                aggregationNames.push("ALL")
 
-            data.individualClassification[aggregationName] =
-              withTravelHistory: [],
-              imported: []
-              indigenous: []
-              introduced: []
-              induced: []
-              relapsing: []
+                _.each aggregationNames, (aggregationName) ->
+                  data.followups[aggregationName] =
+                    allShoki: []
+                    allCases: []
+                    caseNotifiedWith24HRS: []
+                    casesWithCompleteFacilityVisit: []
+                    casesInvestigatedDueToAnotherCaseInvestigation: []
+                    casesWithoutCompleteFacilityVisit: []
+                    casesWithCompleteHouseholdVisit: []
+                    casesWithoutCompleteHouseholdVisit: []
+                    missingUssdNotification: []
+                    missingCaseNotification: []
+                    noFacilityFollowupWithin24Hours: []
+                    noHouseholdFollowupWithin48Hours: []
+                    multipleNotified: []
+                    falsePositive: []
+                    notVerified: []
+                    casesForInvestigation: []
+                    casesForFullInvestigation: []
+                    lostToFollowUp: []
+                    houseWithMoreThanOnePositiveCase: []
+                  data.passiveCases[aggregationName] =
+                    indexCases: []
+                    indexCaseHouseholdMembers: []
+                    positiveIndividualsAtIndexHousehold: []
+                    neighborHouseholds: []
+                    neighborHouseholdMembers: []
+                    positiveIndividualsAtNeighborHouseholds: []
+                  data.ages[aggregationName] =
+                    underFive: []
+                    fiveToFifteen: []
+                    fifteenToTwentyFive: []
+                    overTwentyFive: []
+                    unknown: []
+                  data.gender[aggregationName] =
+                    male: []
+                    female: []
+                    unknown: []
+                  data.netsAndIRS[aggregationName] =
+                    sleptUnderNet: []
+                    recentIRS: []
+                  data.travel[aggregationName] =
+                    "No":[]
+                    "Yes":[] # This needs to be here for old cases
+                    "Yes within Zanzibar":[]
+                    "Yes outside Zanzibar":[]
+                    "Yes within and outside Zanzibar":[]
+                    "Any travel":[]
+                    "Not Applicable":[]
+                  data.totalPositiveCases[aggregationName] = []
 
-          _.each cases, (malariaCase) ->
-            caseLocation = malariaCase.locationBy(options.aggregationLevel) || "UNKNOWN"
+                  data.individualClassification[aggregationName] =
+                    withTravelHistory: [],
+                    imported: []
+                    indigenous: []
+                    introduced: []
+                    induced: []
+                    relapsing: []
 
-            unless data.followups[caseLocation]
-              console.log "Case location #{caseLocation} not found"
-              # Search for it since it may need an alias/translation
-              caseLocation = GeoHierarchy.find(caseLocation,options.aggregationLevel)?[0]?.name or "UNKNOWN"
-              console.log "Updated case location to #{caseLocation}"
+                _.each cases, (malariaCase) ->
+                  caseLocation = malariaCase.locationBy(options.aggregationLevel) || "UNKNOWN"
 
-            data.followups[caseLocation].allCases.push malariaCase
-            data.followups["ALL"].allCases.push malariaCase
+                  unless data.followups[caseLocation]
+                    console.log "Case location #{caseLocation} not found"
+                    # Search for it since it may need an alias/translation
+                    caseLocation = GeoHierarchy.find(caseLocation,options.aggregationLevel)?[0]?.name or "UNKNOWN"
+                    console.log "Updated case location to #{caseLocation}"
 
-            if malariaCase["Facility"]?.complete is "true" or malariaCase["Facility"]?.complete is true
-              data.followups[caseLocation].casesWithCompleteFacilityVisit.push malariaCase
-              data.followups["ALL"].casesWithCompleteFacilityVisit.push malariaCase
-            else
-              data.followups[caseLocation].casesWithoutCompleteFacilityVisit.push malariaCase
-              data.followups["ALL"].casesWithoutCompleteFacilityVisit.push malariaCase
+                  data.followups[caseLocation].allCases.push malariaCase
+                  data.followups["ALL"].allCases.push malariaCase
 
-            if malariaCase.completeHouseholdVisit()
-              data.followups[caseLocation].casesWithCompleteHouseholdVisit.push malariaCase
-              data.followups["ALL"].casesWithCompleteHouseholdVisit.push malariaCase
-            else
-              data.followups[caseLocation].casesWithoutCompleteHouseholdVisit.push malariaCase
-              data.followups["ALL"].casesWithoutCompleteHouseholdVisit.push malariaCase
+                  if malariaCase["Facility"]?.complete is "true" or malariaCase["Facility"]?.complete is true
+                    data.followups[caseLocation].casesWithCompleteFacilityVisit.push malariaCase
+                    data.followups["ALL"].casesWithCompleteFacilityVisit.push malariaCase
+                  else
+                    data.followups[caseLocation].casesWithoutCompleteFacilityVisit.push malariaCase
+                    data.followups["ALL"].casesWithoutCompleteFacilityVisit.push malariaCase
 
-            unless malariaCase["USSD Notification"]?
-              data.followups[caseLocation].missingUssdNotification.push malariaCase
-              data.followups["ALL"].missingUssdNotification.push malariaCase
-            unless malariaCase["Case Notification"]?
-              data.followups[caseLocation].missingCaseNotification.push malariaCase
-              data.followups["ALL"].missingCaseNotification.push malariaCase
-            if malariaCase.notCompleteFacilityAfter24Hours()
-              data.followups[caseLocation].noFacilityFollowupWithin24Hours.push malariaCase
-              data.followups["ALL"].noFacilityFollowupWithin24Hours.push malariaCase
+                  if malariaCase.completeHouseholdVisit()
+                    data.followups[caseLocation].casesWithCompleteHouseholdVisit.push malariaCase
+                    data.followups["ALL"].casesWithCompleteHouseholdVisit.push malariaCase
+                  else
+                    data.followups[caseLocation].casesWithoutCompleteHouseholdVisit.push malariaCase
+                    data.followups["ALL"].casesWithoutCompleteHouseholdVisit.push malariaCase
 
-            if malariaCase.notFollowedUpAfter48Hours()
-              data.followups[caseLocation].noHouseholdFollowupWithin48Hours.push malariaCase
-              data.followups["ALL"].noHouseholdFollowupWithin48Hours.push malariaCase
-            
+                  unless malariaCase["USSD Notification"]?
+                    data.followups[caseLocation].missingUssdNotification.push malariaCase
+                    data.followups["ALL"].missingUssdNotification.push malariaCase
+                  unless malariaCase["Case Notification"]?
+                    data.followups[caseLocation].missingCaseNotification.push malariaCase
+                    data.followups["ALL"].missingCaseNotification.push malariaCase
+                  if malariaCase.notCompleteFacilityAfter24Hours()
+                    data.followups[caseLocation].noFacilityFollowupWithin24Hours.push malariaCase
+                    data.followups["ALL"].noFacilityFollowupWithin24Hours.push malariaCase
 
-            if malariaCase["Household"]?.CaseInvestigationStatus is "Lost To Followup"
-              data.followups[caseLocation].lostToFollowUp.push malariaCase
-              data.followups["ALL"].lostToFollowUp.push malariaCase
+                  if malariaCase.notFollowedUpAfter48Hours()
+                    data.followups[caseLocation].noHouseholdFollowupWithin48Hours.push malariaCase
+                    data.followups["ALL"].noHouseholdFollowupWithin48Hours.push malariaCase
+                  
 
-            if malariaCase["Household"]?.HasThisCaseAlreadyBeenInvestigatedDueToAnotherHouseholdInvestigation is "Yes"
-              data.followups[caseLocation].casesInvestigatedDueToAnotherCaseInvestigation.push malariaCase
-              data.followups["ALL"].casesInvestigatedDueToAnotherCaseInvestigation.push malariaCase
+                  if malariaCase["Household"]?.CaseInvestigationStatus is "Lost To Followup"
+                    data.followups[caseLocation].lostToFollowUp.push malariaCase
+                    data.followups["ALL"].lostToFollowUp.push malariaCase
 
-            if malariaCase["Facility"]?.DmsoVerifiedResults is "Duplicate notification"
-              data.followups[caseLocation].multipleNotified.push malariaCase
-              data.followups["ALL"].multipleNotified.push malariaCase
+                  if malariaCase["Household"]?.HasThisCaseAlreadyBeenInvestigatedDueToAnotherHouseholdInvestigation is "Yes"
+                    data.followups[caseLocation].casesInvestigatedDueToAnotherCaseInvestigation.push malariaCase
+                    data.followups["ALL"].casesInvestigatedDueToAnotherCaseInvestigation.push malariaCase
 
-            if malariaCase["Facility"]?.DmsoVerifiedResults is "False positive"
-              data.followups[caseLocation].falsePositive.push malariaCase
-              data.followups["ALL"].falsePositive.push malariaCase
+                  if malariaCase["Facility"]?.DmsoVerifiedResults is "Duplicate notification"
+                    data.followups[caseLocation].multipleNotified.push malariaCase
+                    data.followups["ALL"].multipleNotified.push malariaCase
 
-            if malariaCase["Facility"]?.DmsoVerifiedResults !="False positive" and malariaCase["Facility"]?.DmsoVerifiedResults != "Duplicate notification"
-              data.followups[caseLocation].casesForInvestigation.push malariaCase
-              data.followups["ALL"].casesForInvestigation.push malariaCase
-            
-            if malariaCase["Facility"]?.DmsoVerifiedResults != "False positive" and malariaCase["Facility"]?.DmsoVerifiedResults != "Duplicate notification" and malariaCase["Household"]?.CaseInvestigationStatus != "Lost To Followup"
-              data.followups[caseLocation].casesForFullInvestigation.push malariaCase
-              data.followups["ALL"].casesForFullInvestigation.push malariaCase
-            
-            if malariaCase["Household Members"].length > 1
-              positiveCases = (cases for cases in malariaCase["Household Members"] when ( cases.MalariaMrdtTestResults&&cases?.MalariaMrdtTestResults!='Negative')||(cases?.MalariaMicroscopyTestResults&&cases?.MalariaMicroscopyTestResults!='Negative'))
-              if positiveCases.length > 1
-                data.followups[caseLocation].houseWithMoreThanOnePositiveCase.push malariaCase
-                data.followups["ALL"].houseWithMoreThanOnePositiveCase.push malariaCase
+                  if malariaCase["Facility"]?.DmsoVerifiedResults is "False positive"
+                    data.followups[caseLocation].falsePositive.push malariaCase
+                    data.followups["ALL"].falsePositive.push malariaCase
 
-            if malariaCase['Household Members'].length > 0
-              malariaCase['Household Members'].forEach (member) ->
-                if Object.keys(member).find(((key) ->
-                  key.includes 'Time Outside Zanzibar'
-                ))
-                  data.individualClassification[caseLocation].withTravelHistory.push malariaCase
-                  data.individualClassification["ALL"].withTravelHistory.push malariaCase
-                if member.CaseCategory
-                  data.individualClassification[caseLocation][member.CaseCategory.toLowerCase()].push malariaCase
-                  data.individualClassification['ALL'][member.CaseCategory.toLowerCase()].push malariaCase
-                return
+                  if malariaCase["Facility"]?.DmsoVerifiedResults !="False positive" and malariaCase["Facility"]?.DmsoVerifiedResults != "Duplicate notification"
+                    data.followups[caseLocation].casesForInvestigation.push malariaCase
+                    data.followups["ALL"].casesForInvestigation.push malariaCase
+                  
+                  if malariaCase["Facility"]?.DmsoVerifiedResults != "False positive" and malariaCase["Facility"]?.DmsoVerifiedResults != "Duplicate notification" and malariaCase["Household"]?.CaseInvestigationStatus != "Lost To Followup"
+                    data.followups[caseLocation].casesForFullInvestigation.push malariaCase
+                    data.followups["ALL"].casesForFullInvestigation.push malariaCase
+                  
+                  if malariaCase["Household Members"].length > 1
+                    positiveCases = (cases for cases in malariaCase["Household Members"] when ( cases.MalariaMrdtTestResults&&cases?.MalariaMrdtTestResults!='Negative')||(cases?.MalariaMicroscopyTestResults&&cases?.MalariaMicroscopyTestResults!='Negative'))
+                    if positiveCases.length > 1
+                      data.followups[caseLocation].houseWithMoreThanOnePositiveCase.push malariaCase
+                      data.followups["ALL"].houseWithMoreThanOnePositiveCase.push malariaCase
 
-            if malariaCase.followedUp()
-              data.passiveCases[caseLocation].indexCases.push malariaCase
-              data.passiveCases["ALL"].indexCases.push malariaCase
+                  if malariaCase['Household Members'].length > 0
+                    malariaCase['Household Members'].forEach (member) ->
+                      if Object.keys(member).find(((key) ->
+                        key.includes 'Time Outside Zanzibar'
+                      ))
+                        data.individualClassification[caseLocation].withTravelHistory.push malariaCase
+                        data.individualClassification["ALL"].withTravelHistory.push malariaCase
+                      if member.CaseCategory
+                        data.individualClassification[caseLocation][member.CaseCategory.toLowerCase()].push malariaCase
+                        data.individualClassification['ALL'][member.CaseCategory.toLowerCase()].push malariaCase
+                      return
 
-              completeIndexCaseHouseholdMembers = malariaCase.completeIndexCaseHouseholdMembers()
-              data.passiveCases[caseLocation].indexCaseHouseholdMembers =  data.passiveCases[caseLocation].indexCaseHouseholdMembers.concat(completeIndexCaseHouseholdMembers)
-              data.passiveCases["ALL"].indexCaseHouseholdMembers =  data.passiveCases["ALL"].indexCaseHouseholdMembers.concat(completeIndexCaseHouseholdMembers)
+                  if malariaCase.followedUp()
+                    data.passiveCases[caseLocation].indexCases.push malariaCase
+                    data.passiveCases["ALL"].indexCases.push malariaCase
 
-              positiveIndividualsAtIndexHousehold = malariaCase.positiveIndividualsAtIndexHousehold()
-              data.passiveCases[caseLocation].positiveIndividualsAtIndexHousehold = data.passiveCases[caseLocation].positiveIndividualsAtIndexHousehold.concat positiveIndividualsAtIndexHousehold
-              data.passiveCases["ALL"].positiveIndividualsAtIndexHousehold = data.passiveCases["ALL"].positiveIndividualsAtIndexHousehold.concat positiveIndividualsAtIndexHousehold
+                    completeIndexCaseHouseholdMembers = malariaCase.completeIndexCaseHouseholdMembers()
+                    data.passiveCases[caseLocation].indexCaseHouseholdMembers =  data.passiveCases[caseLocation].indexCaseHouseholdMembers.concat(completeIndexCaseHouseholdMembers)
+                    data.passiveCases["ALL"].indexCaseHouseholdMembers =  data.passiveCases["ALL"].indexCaseHouseholdMembers.concat(completeIndexCaseHouseholdMembers)
 
-              completeNeighborHouseholds = malariaCase.completeNeighborHouseholds()
-              data.passiveCases[caseLocation].neighborHouseholds =  data.passiveCases[caseLocation].neighborHouseholds.concat(completeNeighborHouseholds)
-              data.passiveCases["ALL"].neighborHouseholds =  data.passiveCases["ALL"].neighborHouseholds.concat(completeNeighborHouseholds)
+                    positiveIndividualsAtIndexHousehold = malariaCase.positiveIndividualsAtIndexHousehold()
+                    data.passiveCases[caseLocation].positiveIndividualsAtIndexHousehold = data.passiveCases[caseLocation].positiveIndividualsAtIndexHousehold.concat positiveIndividualsAtIndexHousehold
+                    data.passiveCases["ALL"].positiveIndividualsAtIndexHousehold = data.passiveCases["ALL"].positiveIndividualsAtIndexHousehold.concat positiveIndividualsAtIndexHousehold
 
-              completeNeighborHouseholdMembers = malariaCase.completeNeighborHouseholdMembers()
-              data.passiveCases[caseLocation].neighborHouseholdMembers =  data.passiveCases[caseLocation].neighborHouseholdMembers.concat(completeNeighborHouseholdMembers)
-              data.passiveCases["ALL"].neighborHouseholdMembers =  data.passiveCases["ALL"].neighborHouseholdMembers.concat(completeNeighborHouseholdMembers)
+                    completeNeighborHouseholds = malariaCase.completeNeighborHouseholds()
+                    data.passiveCases[caseLocation].neighborHouseholds =  data.passiveCases[caseLocation].neighborHouseholds.concat(completeNeighborHouseholds)
+                    data.passiveCases["ALL"].neighborHouseholds =  data.passiveCases["ALL"].neighborHouseholds.concat(completeNeighborHouseholds)
 
-              _.each malariaCase.positiveIndividualsIncludingIndex(), (positiveIndividual) ->
-                data.totalPositiveCases[caseLocation].push positiveIndividual
-                data.totalPositiveCases["ALL"].push positiveIndividual
+                    completeNeighborHouseholdMembers = malariaCase.completeNeighborHouseholdMembers()
+                    data.passiveCases[caseLocation].neighborHouseholdMembers =  data.passiveCases[caseLocation].neighborHouseholdMembers.concat(completeNeighborHouseholdMembers)
+                    data.passiveCases["ALL"].neighborHouseholdMembers =  data.passiveCases["ALL"].neighborHouseholdMembers.concat(completeNeighborHouseholdMembers)
 
-                if positiveIndividual.Age?
-                  age = parseInt(positiveIndividual.Age)
-                  if age < 5
-                    data.ages[caseLocation].underFive.push positiveIndividual
-                    data.ages["ALL"].underFive.push positiveIndividual
-                  else if age < 15
-                    data.ages[caseLocation].fiveToFifteen.push positiveIndividual
-                    data.ages["ALL"].fiveToFifteen.push positiveIndividual
-                  else if age < 25
-                    data.ages[caseLocation].fifteenToTwentyFive.push positiveIndividual
-                    data.ages["ALL"].fifteenToTwentyFive.push positiveIndividual
-                  else if age >= 25
-                    data.ages[caseLocation].overTwentyFive.push positiveIndividual
-                    data.ages["ALL"].overTwentyFive.push positiveIndividual
-                else
-                  data.ages[caseLocation].unknown.push positiveIndividual unless positiveIndividual.age
-                  data.ages["ALL"].unknown.push positiveIndividual unless positiveIndividual.age
+                    _.each malariaCase.positiveIndividualsIncludingIndex(), (positiveIndividual) ->
+                      data.totalPositiveCases[caseLocation].push positiveIndividual
+                      data.totalPositiveCases["ALL"].push positiveIndividual
 
-                if positiveIndividual.Sex is "Male"
-                  data.gender[caseLocation].male.push positiveIndividual
-                  data.gender["ALL"].male.push positiveIndividual
-                else if positiveIndividual.Sex is "Female"
-                  data.gender[caseLocation].female.push positiveIndividual
-                  data.gender["ALL"].female.push positiveIndividual
-                else
-                  data.gender[caseLocation].unknown.push positiveIndividual
-                  data.gender["ALL"].unknown.push positiveIndividual
+                      if positiveIndividual.Age?
+                        age = parseInt(positiveIndividual.Age)
+                        if age < 5
+                          data.ages[caseLocation].underFive.push positiveIndividual
+                          data.ages["ALL"].underFive.push positiveIndividual
+                        else if age < 15
+                          data.ages[caseLocation].fiveToFifteen.push positiveIndividual
+                          data.ages["ALL"].fiveToFifteen.push positiveIndividual
+                        else if age < 25
+                          data.ages[caseLocation].fifteenToTwentyFive.push positiveIndividual
+                          data.ages["ALL"].fifteenToTwentyFive.push positiveIndividual
+                        else if age >= 25
+                          data.ages[caseLocation].overTwentyFive.push positiveIndividual
+                          data.ages["ALL"].overTwentyFive.push positiveIndividual
+                      else
+                        data.ages[caseLocation].unknown.push positiveIndividual unless positiveIndividual.age
+                        data.ages["ALL"].unknown.push positiveIndividual unless positiveIndividual.age
 
-                if (positiveIndividual.SleptunderLLINlastnight is "Yes" || positiveIndividual.IndexcaseSleptunderLLINlastnight is "Yes")
-                  data.netsAndIRS[caseLocation].sleptUnderNet.push positiveIndividual
-                  data.netsAndIRS["ALL"].sleptUnderNet.push positiveIndividual
+                      if positiveIndividual.Sex is "Male"
+                        data.gender[caseLocation].male.push positiveIndividual
+                        data.gender["ALL"].male.push positiveIndividual
+                      else if positiveIndividual.Sex is "Female"
+                        data.gender[caseLocation].female.push positiveIndividual
+                        data.gender["ALL"].female.push positiveIndividual
+                      else
+                        data.gender[caseLocation].unknown.push positiveIndividual
+                        data.gender["ALL"].unknown.push positiveIndividual
 
-                if (positiveIndividual.LastdateofIRS and positiveIndividual.LastdateofIRS.match(/\d\d\d\d-\d\d-\d\d/))
-                  # if date of spraying is less than X months
-                  if (new moment).subtract(Coconut.IRSThresholdInMonths,'months') < (new moment(positiveIndividual.LastdateofIRS))
-                    data.netsAndIRS[caseLocation].recentIRS.push positiveIndividual
-                    data.netsAndIRS["ALL"].recentIRS.push positiveIndividual
+                      if (positiveIndividual.SleptunderLLINlastnight is "Yes" || positiveIndividual.IndexcaseSleptunderLLINlastnight is "Yes")
+                        data.netsAndIRS[caseLocation].sleptUnderNet.push positiveIndividual
+                        data.netsAndIRS["ALL"].sleptUnderNet.push positiveIndividual
 
-                if positiveIndividual.TravelledOvernightInPastMonth?
-                  if positiveIndividual.TravelledOvernightInPastMonth is "Unknown"
-                    positiveIndividual.TravelledOvernightInPastMonth = "Not Applicable"
-                  data.travel[caseLocation][positiveIndividual.TravelledOvernightInPastMonth].push positiveIndividual
-                  data.travel[caseLocation]["Any travel"].push positiveIndividual if positiveIndividual.TravelledOvernightInPastMonth.match(/Yes/)
-                  data.travel["ALL"][positiveIndividual.TravelledOvernightInPastMonth].push positiveIndividual
-                  data.travel["ALL"]["Any travel"].push positiveIndividual if positiveIndividual.TravelledOvernightInPastMonth.match(/Yes/)
-                else if positiveIndividual.OvernightTravelinpastmonth
-                  if positiveIndividual.OvernightTravelinpastmonth is "Unknown"
-                    positiveIndividual.OvernightTravelinpastmonth = "Not Applicable"
-                  data.travel[caseLocation][positiveIndividual.OvernightTravelinpastmonth].push positiveIndividual
-                  data.travel[caseLocation]["Any travel"].push positiveIndividual if positiveIndividual.OvernightTravelinpastmonth.match(/Yes/)
-                  data.travel["ALL"][positiveIndividual.OvernightTravelinpastmonth].push positiveIndividual
-                  data.travel["ALL"]["Any travel"].push positiveIndividual if positiveIndividual.OvernightTravelinpastmonth.match(/Yes/)
+                      if (positiveIndividual.LastdateofIRS and positiveIndividual.LastdateofIRS.match(/\d\d\d\d-\d\d-\d\d/))
+                        # if date of spraying is less than X months
+                        if (new moment).subtract(Coconut.IRSThresholdInMonths,'months') < (new moment(positiveIndividual.LastdateofIRS))
+                          data.netsAndIRS[caseLocation].recentIRS.push positiveIndividual
+                          data.netsAndIRS["ALL"].recentIRS.push positiveIndividual
 
-          options.finished?(data)
-          resolve(data)
+                      if positiveIndividual.TravelledOvernightInPastMonth?
+                        if positiveIndividual.TravelledOvernightInPastMonth is "Unknown"
+                          positiveIndividual.TravelledOvernightInPastMonth = "Not Applicable"
+                        data.travel[caseLocation][positiveIndividual.TravelledOvernightInPastMonth].push positiveIndividual
+                        data.travel[caseLocation]["Any travel"].push positiveIndividual if positiveIndividual.TravelledOvernightInPastMonth.match(/Yes/)
+                        data.travel["ALL"][positiveIndividual.TravelledOvernightInPastMonth].push positiveIndividual
+                        data.travel["ALL"]["Any travel"].push positiveIndividual if positiveIndividual.TravelledOvernightInPastMonth.match(/Yes/)
+                      else if positiveIndividual.OvernightTravelinpastmonth
+                        if positiveIndividual.OvernightTravelinpastmonth is "Unknown"
+                          positiveIndividual.OvernightTravelinpastmonth = "Not Applicable"
+                        data.travel[caseLocation][positiveIndividual.OvernightTravelinpastmonth].push positiveIndividual
+                        data.travel[caseLocation]["Any travel"].push positiveIndividual if positiveIndividual.OvernightTravelinpastmonth.match(/Yes/)
+                        data.travel["ALL"][positiveIndividual.OvernightTravelinpastmonth].push positiveIndividual
+                        data.travel["ALL"]["Any travel"].push positiveIndividual if positiveIndividual.OvernightTravelinpastmonth.match(/Yes/)
+
+
+                # Iterate through each malaria case in the result rows
+                _.each result.rows, (malariaCase) ->
+                    # Extract facility-district property from the malariaCase document
+                    caseLocation = extractFacilityDistrict(malariaCase)
+
+                    # Check if the case location is not found in the follow-ups data
+                    unless data.followups[caseLocation]
+                        # Log a message indicating that the case location was not found
+                        console.log "Case location #{caseLocation} not found"
+
+                        # Search for the case location in the GeoHierarchy with the specified aggregation level
+                        # and update the case location with the found alias or use "UNKNOWN" if not found
+                        caseLocation = GeoHierarchy.find(caseLocation, options.aggregationLevel)?[0]?.name or "UNKNOWN"
+
+                        # Log a message indicating the updated case location
+                        console.log "Updated case location to #{caseLocation}"
+
+                    # Push the current malariaCase to the specific follow-ups location and the "ALL" category
+                    data.followups[caseLocation].allShoki.push malariaCase
+                    data.followups["ALL"].allShoki.push malariaCase
+
+
+                # Iterate through each malaria case in the result rows
+                _.each result.rows, (malariaCase) ->
+                    # Extract facility-district property from the malariaCase document
+                    caseLocation = extractFacilityDistrict(malariaCase)
+
+                    # Check if the case location is not found in the follow-ups data
+                    unless data.followups[caseLocation]
+                        # Log a message indicating that the case location was not found
+                        console.log "Case location #{caseLocation} not found"
+
+                        # Search for the case location in the GeoHierarchy with the specified aggregation level
+                        # and update the case location with the found alias or use "UNKNOWN" if not found
+                        caseLocation = GeoHierarchy.find(caseLocation, options.aggregationLevel)?[0]?.name or "UNKNOWN"
+
+                        # Log a message indicating the updated case location
+                        console.log "Updated case location to #{caseLocation}"
+
+                    # Push the current malariaCase to the specific follow-ups location and the "ALL" category
+                    data.followups[caseLocation].allShoki.push malariaCase
+                    data.followups["ALL"].allShoki.push malariaCase
+
+                # Call the method with the appropriate options
+                reportsInstance.getCasesNotifiedWith24Hrs(options)
+                  .then (notificationResult) =>
+                    if notificationResult?.rows?.length > 0
+                      # Iterate through each malaria case in the notificationResult rows
+                      _.each notificationResult.rows, (notification) ->
+                        # Extract facility-district property from the malariaCase document
+                        notificationCaseLocation = extractFacilityDistrict(notification)
+
+                        # Check if the case location is not found in the follow-ups data
+                        unless data.followups[notificationCaseLocation]
+                          # Log a message indicating that the case location was not found
+                          console.log "Case location #{notificationCaseLocation} not found"
+
+                          # Search for the case location in the GeoHierarchy with the specified aggregation level
+                          # and update the case location with the found alias or use "UNKNOWN" if not found
+                          notificationCaseLocation = GeoHierarchy.find(notificationCaseLocation, options.aggregationLevel)?[0]?.name or "UNKNOWN"
+
+                          # Log a message indicating the updated case location
+                          console.log "Updated case location to #{notificationCaseLocation}"
+
+                        # Push the current malariaCase to the specific follow-ups location and the "ALL" category
+                        data.followups[notificationCaseLocation].caseNotifiedWith24HRS.push notification
+                        data.followups["ALL"].caseNotifiedWith24HRS.push notification
+
+                      options.finished?(data)
+                      resolve(data)
+            # END NOW 
+          else
+            console.log("No rows found in the result.")
+        .catch (error) =>
+          # Handle errors here
+          console.error(error)
+
   @specimensAggregatedForAnalysis = (options) =>
     new Promise (resolve, reject) =>
 
