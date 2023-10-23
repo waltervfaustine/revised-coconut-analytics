@@ -17,7 +17,7 @@ COPY . .
 # RUN npm run bundlify
 
 # Expose the port your app runs on
-EXPOSE 8095
+# EXPOSE 8095
 
 # Default command to run the application
 # CMD ["npm", "run", "start"]
