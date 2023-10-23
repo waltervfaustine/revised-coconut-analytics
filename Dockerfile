@@ -14,7 +14,7 @@ RUN npm install --no-optional --unsafe-perm
 COPY . .
 
 # Build and bundle the CoffeeScript files
-RUN npm run bundlify
+# RUN npm run bundlify
 
 # Expose the port your app runs on
 EXPOSE 8095
