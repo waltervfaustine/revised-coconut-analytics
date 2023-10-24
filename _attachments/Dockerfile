@@ -10,9 +10,13 @@ COPY package*.json ./
 # Install project dependencies
 # RUN npm install --no-optional --unsafe-perm
 
-RUN npm install && \
-    npm cache clean --force && \
-    rm -rf /tmp/*
+# RUN npm install && \
+#     npm cache clean --force && \
+#     rm -rf /tmp/*
+
+RUN npm install && 
+
+RUN npm cache clean --force
 
 # Copy the rest of the application code to the container
 COPY . .
