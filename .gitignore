@@ -2,7 +2,7 @@ _attachments/config.json
 _attachments/app/config.json
 config-udsm.json
 _attachments/vendor.min.js
-_attachments/bundle.js
+# _attachments/bundle.js
 _attachments/npm-debug.log
 _attachments/node_modules/
 __views/urlWithCredentials.txt
